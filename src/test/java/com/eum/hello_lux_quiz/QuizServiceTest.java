@@ -1,0 +1,188 @@
+package com.eum.hello_lux_quiz;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import com.eum.hello_lux_quiz.domain.LifeDb;
+import com.eum.hello_lux_quiz.domain.PatientProfile;
+import com.eum.hello_lux_quiz.domain.QuizItem;
+import com.eum.hello_lux_quiz.domain.QuizResult;
+import com.eum.hello_lux_quiz.domain.QuizSet;
+import com.eum.hello_lux_quiz.dto.GeneratedQuizItemDto;
+import com.eum.hello_lux_quiz.dto.QuizAnswerResponse;
+import com.eum.hello_lux_quiz.repository.LifeDbRepository;
+import com.eum.hello_lux_quiz.repository.PatientProfileRepository;
+import com.eum.hello_lux_quiz.repository.QuizItemRepository;
+import com.eum.hello_lux_quiz.repository.QuizResultRepository;
+import com.eum.hello_lux_quiz.repository.QuizSetRepository;
+import com.eum.hello_lux_quiz.service.QuizGeneratorService;
+import com.eum.hello_lux_quiz.service.QuizScoringService;
+
+@SpringBootTest
+class QuizServiceTest {
+
+    @Autowired
+    private QuizGeneratorService quizGeneratorService;
+
+    @Autowired
+    private QuizScoringService quizScoringService;
+
+    @Autowired
+    private LifeDbRepository lifeDbRepository;
+
+    @Autowired
+    private PatientProfileRepository patientProfileRepository;
+
+    @Autowired
+    private QuizSetRepository quizSetRepository;
+
+    @Autowired
+    private QuizItemRepository quizItemRepository;
+
+    @Autowired
+    private QuizResultRepository quizResultRepository;
+
+    @Test
+    @DisplayName("퀴즈 생성 -> 임의 답안 채점 -> DB 저장 및 결과 출력 전체 테스트")
+    void fullQuizFlowTest() throws InterruptedException {
+        // 1. given: p_code = 1 환자 데이터 준비
+        Integer targetPCode = 1;
+
+        PatientProfile profile = patientProfileRepository.findByPCode(targetPCode)
+                .orElseThrow(() -> new IllegalArgumentException("p_code=" + targetPCode + " 환자 프로필을 찾을 수 없습니다."));
+
+        List<LifeDb> lifeDbList = lifeDbRepository.findByPCode(targetPCode);
+        if (lifeDbList.isEmpty()) {
+            throw new IllegalArgumentException("p_code=" + targetPCode + " 의 삶의DB 데이터가 없습니다.");
+        }
+
+        // Context 조립
+        StringBuilder contextBuilder = new StringBuilder();
+        contextBuilder.append("=== 환자 회상 정보 (삶의DB) ===\n");
+        for (LifeDb memory : lifeDbList) {
+            contextBuilder.append(String.format("""
+                - 고향: %s / 직업: %s / 가족: %s
+                - 좋아하는 것: %s / 주요 장소: %s / 메모: %s
+                -----------------------
+                """,
+                    memory.getHometown(),
+                    memory.getJob(),
+                    memory.getFamily(),
+                    memory.getLikes(),
+                    memory.getPlace(),
+                    memory.getTitle()
+            ));
+        }
+
+        String patientStatus = profile.getPatientStatus() != null ? profile.getPatientStatus() : "유지";
+        String lifeDbContext = contextBuilder.toString();
+
+        System.out.println("⏳ Rate Limit 방지를 위해 3초간 대기합니다...");
+        Thread.sleep(3000);
+
+        // 2. when (Step 1): AI 퀴즈 생성
+        List<GeneratedQuizItemDto> generatedDtos = quizGeneratorService.generateQuizSet(patientStatus, profile, lifeDbContext);
+
+        // (1) 퀴즈 세트 DB 저장 (💡 targetPCode 그대로 전달)
+        QuizSet quizSet = new QuizSet(
+                targetPCode,
+                LocalTime.now(),
+                LocalTime.now(),
+                0
+        );
+        QuizSet savedQuizSet = quizSetRepository.save(quizSet);
+
+        // (2) 퀴즈 아이템 DB 저장 및 임의 답안 채점 진행
+        int correctCount = 0;
+
+        System.out.println("\n==================================================");
+        System.out.println(" 📝 [START] 생성된 퀴즈 풀이 및 LLM 채점 시작");
+        System.out.println("==================================================");
+
+        for (GeneratedQuizItemDto dto : generatedDtos) {
+            // 보기(options) 처리 (List -> JSON 문자열 또는 쉼표 구분자 문자열 변환)
+            String optionsString = (dto.getOptions() != null && !dto.getOptions().isEmpty())
+                    ? String.join(", ", dto.getOptions())
+                    : null;
+
+            // DB 저장 (💡 savedQuizSet.getSetId() 그대로 전달)
+            QuizItem quizItem = new QuizItem(
+                    savedQuizSet.getSetId(),
+                    targetPCode,
+                    0,
+                    dto.getQuizCategory() != null ? dto.getQuizCategory() : "text",
+                    dto.getLevel(),
+                    dto.getQuizComment(),
+                    dto.getQuizPhoto(),
+                    dto.getAnswer(),
+                    optionsString
+            );
+            quizItemRepository.save(quizItem);
+
+            // 임의답안 생성 (테스트용: 짝수 문제는 실제 정답을, 홀수 문제는 '잘 모르겠습니다' 오답 제출)
+            String dummyUserAnswer = (dto.getQuizNum() % 2 == 0) ? dto.getAnswer() : "잘 모르겠습니다";
+
+            // LLM 채점 서비스 호출
+            QuizAnswerResponse scoreResult = quizScoringService.scoreAnswer(
+                    dto.getQuizComment(),
+                    dto.getAnswer(),
+                    dummyUserAnswer
+            );
+
+            if (scoreResult.isCorrect()) {
+                correctCount++;
+            }
+
+            // 터미널 결과 출력
+            System.out.println(String.format("""
+                [Q%d - Level %d (%s)]
+                - 질문: %s
+                - 보기: %s
+                - 힌트: %s
+                - 정답: %s
+                - 제출 답안: %s
+                - 채점 결과: %s (%s)
+                --------------------------------------------------""",
+                    dto.getQuizNum(),
+                    dto.getLevel(),
+                    dto.getQuizCategory(),
+                    dto.getQuizComment(),
+                    (dto.getOptions() != null && !dto.getOptions().isEmpty()) ? dto.getOptions() : "[]",
+                    (dto.getHints() != null && !dto.getHints().isEmpty()) ? dto.getHints() : "[]",
+                    dto.getAnswer(),
+                    dummyUserAnswer,
+                    scoreResult.isCorrect() ? "⭕ 정답" : "❌ 오답",
+                    scoreResult.getFeedback()
+            ));
+        }
+
+        // 3. when (Step 2): 최종 퀴즈 결과(QuizResult) DB 저장
+        QuizResult quizResult = new QuizResult(
+                savedQuizSet.getSetId(),
+                targetPCode,
+                LocalDate.now(),
+                generatedDtos.size(),
+                correctCount,
+                0,
+                "N"
+        );
+        quizResultRepository.save(quizResult);
+
+        // 4. then: 검증 및 종합 결과 터미널 출력
+        assertThat(generatedDtos).hasSize(7);
+
+        System.out.println("\n==================================================");
+        System.out.println(" 🎉 [COMPLETED] 퀴즈 결과 DB 저장 및 테스트 완료!");
+        System.out.println(" - 저장된 Set ID: " + savedQuizSet.getSetId());
+        System.out.println(" - 총 문제 수: " + generatedDtos.size());
+        System.out.println(" - 맞힌 개수: " + correctCount + " / " + generatedDtos.size());
+        System.out.println("==================================================\n");
+    }
+}
