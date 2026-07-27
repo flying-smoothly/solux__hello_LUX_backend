@@ -1,15 +1,21 @@
 package com.eum.hello_lux_quiz.service;
 
-import com.eum.hello_lux_quiz.domain.DetailEvent;
-import com.eum.hello_lux_quiz.domain.LifeDb;
-import com.eum.hello_lux_quiz.dto.*;
-import com.eum.hello_lux_quiz.repository.DetailRepository;
-import com.eum.hello_lux_quiz.repository.LifeDbRepository;
-import lombok.RequiredArgsConstructor;
+import java.time.LocalDate;
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
+import com.eum.hello_lux_quiz.domain.DetailEvent;
+import com.eum.hello_lux_quiz.domain.LifeDb;
+import com.eum.hello_lux_quiz.dto.LifeDbEventRequestDto;
+import com.eum.hello_lux_quiz.dto.LifeDbRequestDto;
+import com.eum.hello_lux_quiz.dto.LifeDbResponseDto;
+import com.eum.hello_lux_quiz.dto.LifeDbUpdateRequestDto;
+import com.eum.hello_lux_quiz.repository.DetailRepository;
+import com.eum.hello_lux_quiz.repository.LifeDbRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -57,7 +63,11 @@ public class LifeDbService {
         LifeDb lifeDb = lifeDbRepository.findById(memoryId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 삶의 DB를 찾을 수 없습니다. id=" + memoryId));
 
-        return new LifeDbResponseDto(lifeDb);
+        // 1. 해당 memoryId에 해당하는 세분화 사건 목록 가져오기
+        List<DetailEvent> events = detailRepository.findByMemoryId(memoryId);
+
+        // 2. lifeDb와 events를 함께 전달 (인자 2개)
+        return new LifeDbResponseDto(lifeDb, events); // ✅ 해결!
     }
 
     // 3. 환자 삶의 DB 사건 추가 (세분화 테이블 저장)
@@ -95,3 +105,4 @@ public class LifeDbService {
         return lifeDb.getMemoryId();
     }
 }
+
