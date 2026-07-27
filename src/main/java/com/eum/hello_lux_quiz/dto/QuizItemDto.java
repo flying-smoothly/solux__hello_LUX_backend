@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
@@ -92,4 +93,29 @@ public class QuizItemDto {
     public void setOptions(List<String> options) {
         this.options = options;
     }
+
+    // QuizItemDto.java 에 추가할 필드 및 수동 Getter/Setter (또는 Jackson 매핑)
+    @JsonProperty("set_id")
+    private Integer setId;
+
+    @JsonProperty("p_code")
+    private Integer pCode;
+
+    // 필요 시 수동 Getter / Setter
+    public Integer getSetId() {
+        return setId;
+    }
+
+    public void setSetId(Integer setId) {
+        this.setId = setId;
+    }
+
+    public Integer getPCode() {
+        return pCode;
+    }
+
+    public void setPCode(Integer pCode) {
+        this.pCode = pCode;
+    }
 }
+
