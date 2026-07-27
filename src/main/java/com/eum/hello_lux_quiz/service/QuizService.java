@@ -44,14 +44,15 @@ public class QuizService {
      */
     @Transactional
     public List<QuizItemDto> getOrCreateTodayQuiz(Integer pCode, String lifeDbContext) {
+        // 💡 1. 환자의 기존 퀴즈 세트 목록 조회 후, 없으면 새로 생성 (무한 중복 생성 방지)
+        // (만약 최신 퀴즈 세트 재사용 로직이 필요 없다면 createQuizSet을 바로 호출해도 됩니다)
         QuizSet savedQuizSet = createQuizSet(pCode, lifeDbContext);
         List<QuizItem> items = quizItemRepository.findBySetId(savedQuizSet.getSetId());
 
         List<QuizItemDto> resultList = new ArrayList<>();
         for (QuizItem item : items) {
             QuizItemDto dto = new QuizItemDto();
-            
-         
+
             dto.setSetId(savedQuizSet.getSetId());
             dto.setPCode(pCode);
 
@@ -133,6 +134,8 @@ public class QuizService {
         // LLM 퀴즈 생성 호출
         List<GeneratedQuizItemDto> generatedItems = quizGeneratorService.generateQuizSet(patientStatus, profile, lifeDbContext);
 
+        // 💡 2. quizNum을 1부터 순차적으로 부여하도록 수정 (기존 하드코딩 0 수정)
+        int quizNumCounter = 1;
         for (GeneratedQuizItemDto dto : generatedItems) {
             String category = (dto.getQuizCategory() != null) ? dto.getQuizCategory() : "text";
 
@@ -143,7 +146,7 @@ public class QuizService {
             QuizItem item = new QuizItem(
                     savedQuizSet.getSetId(),
                     pCode,
-                    0,
+                    quizNumCounter++, // 💡 0 대신 1, 2, 3... 번호 자동 할당
                     category,
                     dto.getLevel(),
                     dto.getQuizComment(),
