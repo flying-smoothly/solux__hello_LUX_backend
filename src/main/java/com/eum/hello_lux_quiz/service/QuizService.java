@@ -44,8 +44,6 @@ public class QuizService {
      */
     @Transactional
     public List<QuizItemDto> getOrCreateTodayQuiz(Integer pCode, String lifeDbContext) {
-        // 💡 1. 환자의 기존 퀴즈 세트 목록 조회 후, 없으면 새로 생성 (무한 중복 생성 방지)
-        // (만약 최신 퀴즈 세트 재사용 로직이 필요 없다면 createQuizSet을 바로 호출해도 됩니다)
         QuizSet savedQuizSet = createQuizSet(pCode, lifeDbContext);
         List<QuizItem> items = quizItemRepository.findBySetId(savedQuizSet.getSetId());
 
@@ -134,7 +132,6 @@ public class QuizService {
         // LLM 퀴즈 생성 호출
         List<GeneratedQuizItemDto> generatedItems = quizGeneratorService.generateQuizSet(patientStatus, profile, lifeDbContext);
 
-        // 💡 2. quizNum을 1부터 순차적으로 부여하도록 수정 (기존 하드코딩 0 수정)
         int quizNumCounter = 1;
         for (GeneratedQuizItemDto dto : generatedItems) {
             String category = (dto.getQuizCategory() != null) ? dto.getQuizCategory() : "text";
@@ -146,7 +143,7 @@ public class QuizService {
             QuizItem item = new QuizItem(
                     savedQuizSet.getSetId(),
                     pCode,
-                    quizNumCounter++, // 💡 0 대신 1, 2, 3... 번호 자동 할당
+                    quizNumCounter++,
                     category,
                     dto.getLevel(),
                     dto.getQuizComment(),
@@ -183,8 +180,15 @@ public class QuizService {
         return list;
     }
 
-    public List<QuizResultResponse> getAllQuizResultsByPCode(Integer pCode) {
-        List<QuizResult> results = quizResultRepository.findByPCode(pCode);
+    //  from, to 파라미터 수신 및 조건부 조회 구현
+    public List<QuizResultResponse> getAllQuizResultsByPCode(Integer pCode, LocalDate from, LocalDate to) {
+        List<QuizResult> results;
+
+        if (from != null && to != null) {
+            results = quizResultRepository.findByPCodeAndDateBetween(pCode, from, to);
+        } else {
+            results = quizResultRepository.findByPCode(pCode);
+        }
 
         List<QuizResultResponse> responseList = new ArrayList<>();
         for (QuizResult result : results) {
