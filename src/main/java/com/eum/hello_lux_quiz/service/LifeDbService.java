@@ -38,6 +38,16 @@ public class LifeDbService {
         );
 
         LifeDb saved = lifeDbRepository.save(lifeDb);
+
+        if (request.getEvent() != null && !request.getEvent().isBlank()) {
+            DetailEvent detailEvent = new DetailEvent(
+                    saved.getMemoryId(),
+                    request.getEvent(),
+                    request.getPhotoUrl(),
+                    request.getCategory()
+            );
+            detailRepository.save(detailEvent);
+        }
         return saved.getMemoryId();
     }
 
