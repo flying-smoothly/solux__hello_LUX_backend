@@ -1,6 +1,7 @@
 package com.eum.hello_lux_quiz.controller;
 
-import com.eum.hello_lux_quiz.dto.PatientStatusUpdateRequest;
+import com.eum.hello_lux_quiz.dto.DoctorLevelUpdateRequest;
+import com.eum.hello_lux_quiz.dto.DoctorLevelUpdateResponse;
 import com.eum.hello_lux_quiz.service.PatientService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,16 +17,18 @@ public class DoctorController {
     }
 
     /**
-     * 의사가 특정 환자의 인지 상태 및 퀴즈 난이도 단계(유지/주의/위험)를 조절하는 API PUT
-     * /api/doctor/{p_code}/status
+     * 의사 환자 난이도 조절 API
+     * PUT /api/doctor/{p_code}/paitient_status
      */
-    @PutMapping("/{p_code}/status")
-    public ResponseEntity<String> updatePatientStatus(
+    @PutMapping("/{p_code}/paitient_status")
+    public ResponseEntity<DoctorLevelUpdateResponse> updatePatientStatus(
             @PathVariable("p_code") Integer pCode,
-            @RequestBody PatientStatusUpdateRequest request) {
+            @RequestBody DoctorLevelUpdateRequest request) {
 
+        // Service 로직 실행 (환자 상태 변경)
         patientService.updatePatientStatus(pCode, request.getPatientStatus());
 
-        return ResponseEntity.ok("환자 상태 및 퀴즈 난이도가 성공적으로 조절되었습니다: " + request.getPatientStatus());
+        // 명세서 응답: {"message": "난이도 변경 완료"}
+        return ResponseEntity.ok(new DoctorLevelUpdateResponse("난이도 변경 완료"));
     }
 }
