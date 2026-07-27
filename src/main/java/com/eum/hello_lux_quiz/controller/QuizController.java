@@ -24,7 +24,7 @@ public class QuizController {
     // ==========================================
     @GetMapping("/quiz/{p_code}/today")
     public ResponseEntity<List<QuizItemDto>> getTodayQuiz(
-            @PathVariable("p_code") Integer pCode) { 
+            @PathVariable("p_code") Integer pCode) {
 
         List<QuizItemDto> todayQuizzes = quizService.getOrCreateTodayQuiz(pCode, "");
         return ResponseEntity.ok(todayQuizzes);
@@ -36,7 +36,7 @@ public class QuizController {
     // ==========================================
     @PostMapping("/quiz/{p_code}/{set_id}/{quiz_num}/answer")
     public ResponseEntity<QuizAnswerResponse> submitAnswer(
-            @PathVariable("p_code") Integer pCode,   
+            @PathVariable("p_code") Integer pCode,
             @PathVariable("set_id") Integer setId,
             @PathVariable("quiz_num") Integer quizNum,
             @RequestBody QuizAnswerRequest request) {
@@ -51,7 +51,7 @@ public class QuizController {
     // ==========================================
     @GetMapping({"/patients/{p_code}/results/{date}", "/patients/{p_code}/results"})
     public ResponseEntity<QuizResultResponse> getQuizResult(
-            @PathVariable("p_code") Integer pCode,   
+            @PathVariable("p_code") Integer pCode,
             @PathVariable(value = "date", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate datePath,
             @RequestParam(value = "date", required = false)
@@ -71,7 +71,7 @@ public class QuizController {
      */
     @GetMapping("/patients/{p_code}/quizSet/{set_id}/feedbacks")
     public ResponseEntity<List<QuizFeedbackResponse>> getQuizFeedback(
-            @PathVariable("p_code") Integer pCode,   
+            @PathVariable("p_code") Integer pCode,
             @PathVariable("set_id") Integer setId) {
 
         List<QuizFeedbackResponse> response = quizService.getQuizFeedback(setId);
@@ -79,18 +79,22 @@ public class QuizController {
     }
 
     /**
-     * GET /api/patients/{p_code}/quiz-results 퀴즈 기록 전체 조회
+     * GET /api/patients/{p_code}/quiz-results 퀴즈 기록 전체/기간 조회
      */
     @GetMapping("/patients/{p_code}/quiz-results")
     public ResponseEntity<List<QuizResultResponse>> getAllQuizResults(
-            @PathVariable("p_code") Integer pCode) { 
+            @PathVariable("p_code") Integer pCode,
+            @RequestParam(value = "from", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(value = "to", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
 
-        List<QuizResultResponse> response = quizService.getAllQuizResultsByPCode(pCode);
+        List<QuizResultResponse> response = quizService.getAllQuizResultsByPCode(pCode, from, to);
         return ResponseEntity.ok(response);
     }
 
     // ==========================================
-    // 5. (필요 시) 퀴즈 세트 전체 최종 제출 처리 API
+    // 5. 퀴즈 세트 전체 최종 제출 처리 API
     // POST /api/quiz/result/submit
     // ==========================================
     @PostMapping("/quiz/result/submit")
