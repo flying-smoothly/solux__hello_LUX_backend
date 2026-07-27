@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -23,9 +24,9 @@ public class QuizController {
     // ==========================================
     @GetMapping("/quiz/{p_code}/today")
     public ResponseEntity<List<QuizItemDto>> getTodayQuiz(
-            @PathVariable("p_code") Long pCode) {
+            @PathVariable("p_code") Integer pCode) { 
 
-        List<QuizItemDto> todayQuizzes = quizService.getOrCreateTodayQuiz(pCode.intValue(), "");
+        List<QuizItemDto> todayQuizzes = quizService.getOrCreateTodayQuiz(pCode, "");
         return ResponseEntity.ok(todayQuizzes);
     }
 
@@ -35,13 +36,12 @@ public class QuizController {
     // ==========================================
     @PostMapping("/quiz/{p_code}/{set_id}/{quiz_num}/answer")
     public ResponseEntity<QuizAnswerResponse> submitAnswer(
-            @PathVariable("p_code") Long pCode,
-            @PathVariable("set_id") Integer setId, // Long -> Integer 변경
+            @PathVariable("p_code") Integer pCode,   
+            @PathVariable("set_id") Integer setId,
             @PathVariable("quiz_num") Integer quizNum,
             @RequestBody QuizAnswerRequest request) {
 
-        // Body에 담겨온 answer 단답형 문자열 전달
-        QuizAnswerResponse response = quizService.processAnswer(pCode.intValue(), setId, quizNum, request.getAnswer());
+        QuizAnswerResponse response = quizService.processAnswer(pCode, setId, quizNum, request.getAnswer());
         return ResponseEntity.ok(response);
     }
 
@@ -51,16 +51,15 @@ public class QuizController {
     // ==========================================
     @GetMapping({"/patients/{p_code}/results/{date}", "/patients/{p_code}/results"})
     public ResponseEntity<QuizResultResponse> getQuizResult(
-            @PathVariable("p_code") Long pCode,
+            @PathVariable("p_code") Integer pCode,   
             @PathVariable(value = "date", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate datePath,
             @RequestParam(value = "date", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateQuery) {
 
-        // Path or Query 둘 중 들어온 날짜 적용 (기본값: 오늘 날짜)
         LocalDate targetDate = (datePath != null) ? datePath : (dateQuery != null ? dateQuery : LocalDate.now());
 
-        QuizResultResponse response = quizService.getQuizResultByDate(pCode.intValue(), targetDate);
+        QuizResultResponse response = quizService.getQuizResultByDate(pCode, targetDate);
         return ResponseEntity.ok(response);
     }
 
@@ -72,8 +71,8 @@ public class QuizController {
      */
     @GetMapping("/patients/{p_code}/quizSet/{set_id}/feedbacks")
     public ResponseEntity<List<QuizFeedbackResponse>> getQuizFeedback(
-            @PathVariable("p_code") Long pCode,
-            @PathVariable("set_id") Integer setId) { // Long -> Integer 변경
+            @PathVariable("p_code") Integer pCode,   
+            @PathVariable("set_id") Integer setId) {
 
         List<QuizFeedbackResponse> response = quizService.getQuizFeedback(setId);
         return ResponseEntity.ok(response);
@@ -84,9 +83,21 @@ public class QuizController {
      */
     @GetMapping("/patients/{p_code}/quiz-results")
     public ResponseEntity<List<QuizResultResponse>> getAllQuizResults(
-            @PathVariable("p_code") Long pCode) {
+            @PathVariable("p_code") Integer pCode) { 
 
-        List<QuizResultResponse> response = quizService.getAllQuizResultsByPCode(pCode.intValue());
+        List<QuizResultResponse> response = quizService.getAllQuizResultsByPCode(pCode);
         return ResponseEntity.ok(response);
+    }
+
+    // ==========================================
+    // 5. (필요 시) 퀴즈 세트 전체 최종 제출 처리 API
+    // POST /api/quiz/result/submit
+    // ==========================================
+    @PostMapping("/quiz/result/submit")
+    public ResponseEntity<Map<String, String>> submitQuizResult(
+            @RequestBody QuizResultSubmitRequest request) {
+
+        quizService.submitQuizResult(request, "");
+        return ResponseEntity.ok(Map.of("message", "퀴즈 결과 제출 및 다음 세트 생성이 완료되었습니다."));
     }
 }
