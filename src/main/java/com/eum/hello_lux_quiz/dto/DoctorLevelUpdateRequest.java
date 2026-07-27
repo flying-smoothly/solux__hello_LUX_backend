@@ -8,17 +8,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class DoctorLevelUpdateRequest {
 
-    @JsonProperty("quiz_type")
-    private String quizType;
+    // 명세서 Request Body Key인 "paitient_status"와 매핑
+    @JsonProperty("paitient_status")
+    private String patientStatus;
 
-    private Integer level;
-
-    // Getter (Lombok 미동작 대비)
-    public String getQuizType() {
-        return quizType;
-    }
-
-    public Integer getLevel() {
-        return level;
+    public String getPatientStatus() {
+        return patientStatus;
     }
 }
