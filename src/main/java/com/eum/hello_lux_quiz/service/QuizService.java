@@ -50,6 +50,11 @@ public class QuizService {
         List<QuizItemDto> resultList = new ArrayList<>();
         for (QuizItem item : items) {
             QuizItemDto dto = new QuizItemDto();
+            
+         
+            dto.setSetId(savedQuizSet.getSetId());
+            dto.setPCode(pCode);
+
             dto.setQuizNum(item.getQuizNum());
             dto.setLevel(item.getLevel());
             dto.setQuizCategory(item.getQuizCategory());
