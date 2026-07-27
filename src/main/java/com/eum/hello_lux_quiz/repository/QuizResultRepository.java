@@ -10,9 +10,11 @@ import org.springframework.stereotype.Repository;
 import com.eum.hello_lux_quiz.domain.QuizResult;
 
 @Repository
-public interface QuizResultRepository extends JpaRepository<QuizResult, Integer> { // 💡 Long -> Integer 변경
+public interface QuizResultRepository extends JpaRepository<QuizResult, Integer> {
 
-    List<QuizResult> findByPCode(Integer pCode); // 💡 Long -> Integer 변경
+    List<QuizResult> findByPCode(Integer pCode);
 
-    Optional<QuizResult> findByPCodeAndDate(Integer pCode, LocalDate date); // 💡 Long -> Integer 변경
+    Optional<QuizResult> findByPCodeAndDate(Integer pCode, LocalDate date);
+
+    List<QuizResult> findByPCodeAndDateBetween(Integer pCode, LocalDate from, LocalDate to);
 }
