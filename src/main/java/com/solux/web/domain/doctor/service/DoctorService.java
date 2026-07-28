@@ -53,7 +53,9 @@ public class DoctorService {
      */
     public List<DoctorPatientResponse> getPatients(String email) {
         return doctorPatientRepository.findAllByUserEmail(email).stream()
-                .map(dp -> DoctorPatientResponse.from(patientService.getProfile(dp.getPCode())))
+                .map(dp -> DoctorPatientResponse.from(
+                        patientService.getProfile(dp.getPCode()),
+                        patientService.getPatientName(dp.getPCode())))
                 .toList();
     }
 
@@ -95,11 +97,11 @@ public class DoctorService {
         validateLinked(email, pCode);
         doctorReportRepository.findByPCodeAndUserEmail(pCode, email)
                 .ifPresentOrElse(
-                        report -> report.updateContent(request.report()),
+                        report -> report.updateReport(request.report()),
                         () -> doctorReportRepository.save(DoctorReport.builder()
                                 .pCode(pCode)
                                 .userEmail(email)
-                                .content(request.report())
+                                .report(request.report())
                                 .build())
                 );
     }

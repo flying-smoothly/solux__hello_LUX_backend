@@ -6,6 +6,7 @@ import com.solux.web.domain.patient.entity.PatientProfile;
 /**
  * 환자 정보 조회 응답.
  * 예: {"p_code":1001,"name":"홍길동","diagnosis":"경도인지장애","personality":"온화함"}
+ * 이름은 회원(Member) 에서 관리하므로 별도로 전달받는다.
  */
 public record PatientInfoResponse(
         @JsonProperty("p_code") Integer pCode,
@@ -13,10 +14,10 @@ public record PatientInfoResponse(
         String diagnosis,
         String personality
 ) {
-    public static PatientInfoResponse from(PatientProfile profile) {
+    public static PatientInfoResponse from(PatientProfile profile, String name) {
         return new PatientInfoResponse(
                 profile.getPCode(),
-                profile.getName(),
+                name,
                 profile.getDiagnosis(),
                 profile.getPersonality()
         );

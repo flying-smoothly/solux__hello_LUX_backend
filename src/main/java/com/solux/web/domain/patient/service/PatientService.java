@@ -1,6 +1,5 @@
 package com.solux.web.domain.patient.service;
 
-import com.solux.web.domain.member.entity.Member;
 import com.solux.web.domain.member.repository.MemberRepository;
 import com.solux.web.domain.patient.dto.PatientInfoResponse;
 import com.solux.web.domain.patient.dto.PatientRegisterRequest;
@@ -27,12 +26,13 @@ public class PatientService {
 
     /**
      * 환자 기본 정보 등록. 환자 코드(p_code)를 발급하고 프로필을 생성한다.
-     * 이름/생년월일은 회원 정보에서 가져온다.
+     * 이름/생년월일은 회원(Member) 에서 관리하므로 프로필에는 저장하지 않는다.
      */
     @Transactional
     public PatientRegisterResponse register(String email, PatientRegisterRequest request) {
-        Member member = memberRepository.findByEmail(email)
-                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+        if (!memberRepository.existsByEmail(email)) {
+            throw new CustomException(ErrorCode.MEMBER_NOT_FOUND);
+        }
 
         if (patientRepository.existsByUserEmail(email)) {
             throw new CustomException(ErrorCode.PATIENT_ALREADY_REGISTERED);
@@ -44,12 +44,10 @@ public class PatientService {
 
         PatientProfile profile = PatientProfile.builder()
                 .pCode(patient.getPCode())
-                .name(member.getName())
-                .birthDate(member.getBirthDate())
                 .gender(request.gender())
                 .diagnosis(request.diagnosis())
                 .personality(request.personality())
-                .style(request.speechStyle())
+                .speechStyle(request.speechStyle())
                 .build();
         patientProfileRepository.save(profile);
 
@@ -58,9 +56,10 @@ public class PatientService {
 
     /**
      * 환자 정보 조회. 환자/보호자/의사 공통.
+     * 이름은 회원(Member) 정보에서 조회한다.
      */
     public PatientInfoResponse getInfo(Integer pCode) {
-        return PatientInfoResponse.from(getProfile(pCode));
+        return PatientInfoResponse.from(getProfile(pCode), getPatientName(pCode));
     }
 
     /**
@@ -86,6 +85,17 @@ public class PatientService {
     public PatientProfile getProfile(Integer pCode) {
         return patientProfileRepository.findById(pCode)
                 .orElseThrow(() -> new CustomException(ErrorCode.PATIENT_NOT_FOUND));
+    }
+
+    /**
+     * 환자 이름 조회. 이름은 회원(Member) 에서 관리하므로 p_code -> 회원 으로 조회한다.
+     */
+    public String getPatientName(Integer pCode) {
+        Patient patient = patientRepository.findById(pCode)
+                .orElseThrow(() -> new CustomException(ErrorCode.PATIENT_NOT_FOUND));
+        return memberRepository.findByEmail(patient.getUserEmail())
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND))
+                .getName();
     }
 
     public void validateExists(Integer pCode) {

@@ -9,12 +9,12 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
-
 /**
  * 환자 상세 프로필. ERD 의 `환자_프로필` 테이블에 대응한다.
  * Patient 와 동일한 p_code 를 기본키로 공유한다(1:1).
- * style 필드는 API 명세의 speech_style(말투) 에 대응한다.
+ *
+ * <p>이름/생년월일은 공통 정보이므로 {@code Member} 에서만 관리한다(중복 제거).
+ * speech_style 은 API 명세의 말투 필드에 대응한다.</p>
  */
 @Entity
 @Getter
@@ -26,12 +26,6 @@ public class PatientProfile {
     @Column(name = "p_code")
     private Integer pCode;
 
-    @Column(name = "name", nullable = false, length = 50)
-    private String name;
-
-    @Column(name = "birth_date", nullable = false)
-    private LocalDate birthDate;
-
     @Column(name = "gender", nullable = false, length = 10)
     private String gender;
 
@@ -41,27 +35,29 @@ public class PatientProfile {
     @Column(name = "personality", nullable = false, columnDefinition = "TEXT")
     private String personality;
 
-    @Column(name = "style", nullable = false, columnDefinition = "TEXT")
-    private String style;
+    @Column(name = "speech_style", nullable = false, columnDefinition = "TEXT")
+    private String speechStyle;
+
+    @Column(name = "patient_status", length = 50)
+    private String patientStatus;
 
     @Builder
-    public PatientProfile(Integer pCode, String name, LocalDate birthDate, String gender,
-                          String diagnosis, String personality, String style) {
+    public PatientProfile(Integer pCode, String gender, String diagnosis,
+                          String personality, String speechStyle, String patientStatus) {
         this.pCode = pCode;
-        this.name = name;
-        this.birthDate = birthDate;
         this.gender = gender;
         this.diagnosis = diagnosis;
         this.personality = personality;
-        this.style = style;
+        this.speechStyle = speechStyle;
+        this.patientStatus = patientStatus;
     }
 
-    public void update(String personality, String style) {
+    public void update(String personality, String speechStyle) {
         if (personality != null && !personality.isBlank()) {
             this.personality = personality;
         }
-        if (style != null && !style.isBlank()) {
-            this.style = style;
+        if (speechStyle != null && !speechStyle.isBlank()) {
+            this.speechStyle = speechStyle;
         }
     }
 }
