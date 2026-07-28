@@ -6,8 +6,6 @@ import com.solux.web.domain.patient.dto.PatientRegisterRequest;
 import com.solux.web.domain.patient.dto.PatientRegisterResponse;
 import com.solux.web.domain.patient.dto.PatientUpdateRequest;
 import com.solux.web.domain.patient.entity.Patient;
-import com.solux.web.domain.patient.entity.PatientProfile;
-import com.solux.web.domain.patient.repository.PatientProfileRepository;
 import com.solux.web.domain.patient.repository.PatientRepository;
 import com.solux.web.global.exception.CustomException;
 import com.solux.web.global.exception.ErrorCode;
@@ -21,12 +19,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class PatientService {
 
     private final PatientRepository patientRepository;
-    private final PatientProfileRepository patientProfileRepository;
     private final MemberRepository memberRepository;
 
     /**
-     * 환자 기본 정보 등록. 환자 코드(p_code)를 발급하고 프로필을 생성한다.
-     * 이름/생년월일은 회원(Member) 에서 관리하므로 프로필에는 저장하지 않는다.
+     * 환자 기본 정보 등록. 환자 코드(p_code)를 발급하며 상세 정보를 함께 저장한다.
+     * 이름/생년월일은 회원(Member) 에서 관리하므로 저장하지 않는다.
      */
     @Transactional
     public PatientRegisterResponse register(String email, PatientRegisterRequest request) {
@@ -40,16 +37,11 @@ public class PatientService {
 
         Patient patient = patientRepository.save(Patient.builder()
                 .userEmail(email)
-                .build());
-
-        PatientProfile profile = PatientProfile.builder()
-                .pCode(patient.getPCode())
                 .gender(request.gender())
                 .diagnosis(request.diagnosis())
                 .personality(request.personality())
                 .speechStyle(request.speechStyle())
-                .build();
-        patientProfileRepository.save(profile);
+                .build());
 
         return new PatientRegisterResponse(patient.getPCode(), "환자 등록 완료");
     }
@@ -59,7 +51,7 @@ public class PatientService {
      * 이름은 회원(Member) 정보에서 조회한다.
      */
     public PatientInfoResponse getInfo(Integer pCode) {
-        return PatientInfoResponse.from(getProfile(pCode), getPatientName(pCode));
+        return PatientInfoResponse.from(getPatient(pCode), getPatientName(pCode));
     }
 
     /**
@@ -68,8 +60,8 @@ public class PatientService {
     @Transactional
     public void update(String email, Integer pCode, PatientUpdateRequest request) {
         validateOwner(email, pCode);
-        PatientProfile profile = getProfile(pCode);
-        profile.update(request.personality(), request.speechStyle());
+        Patient patient = getPatient(pCode);
+        patient.update(request.personality(), request.speechStyle());
     }
 
     /**
@@ -82,8 +74,8 @@ public class PatientService {
 
     // ===== 다른 도메인에서 재사용하는 헬퍼 =====
 
-    public PatientProfile getProfile(Integer pCode) {
-        return patientProfileRepository.findById(pCode)
+    public Patient getPatient(Integer pCode) {
+        return patientRepository.findById(pCode)
                 .orElseThrow(() -> new CustomException(ErrorCode.PATIENT_NOT_FOUND));
     }
 
@@ -91,8 +83,7 @@ public class PatientService {
      * 환자 이름 조회. 이름은 회원(Member) 에서 관리하므로 p_code -> 회원 으로 조회한다.
      */
     public String getPatientName(Integer pCode) {
-        Patient patient = patientRepository.findById(pCode)
-                .orElseThrow(() -> new CustomException(ErrorCode.PATIENT_NOT_FOUND));
+        Patient patient = getPatient(pCode);
         return memberRepository.findByEmail(patient.getUserEmail())
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND))
                 .getName();
@@ -105,8 +96,7 @@ public class PatientService {
     }
 
     private void validateOwner(String email, Integer pCode) {
-        Patient patient = patientRepository.findById(pCode)
-                .orElseThrow(() -> new CustomException(ErrorCode.PATIENT_NOT_FOUND));
+        Patient patient = getPatient(pCode);
         if (!patient.getUserEmail().equals(email)) { // 추후 의사,보호자 domain 업데이트 시 수정 예정
             throw new CustomException(ErrorCode.FORBIDDEN);
         }

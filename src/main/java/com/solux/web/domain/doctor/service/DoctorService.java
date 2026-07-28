@@ -10,7 +10,6 @@ import com.solux.web.domain.doctor.entity.PatientQuizLevel;
 import com.solux.web.domain.doctor.repository.DoctorPatientRepository;
 import com.solux.web.domain.doctor.repository.DoctorReportRepository;
 import com.solux.web.domain.doctor.repository.PatientQuizLevelRepository;
-import com.solux.web.domain.patient.entity.PatientProfile;
 import com.solux.web.domain.patient.service.PatientService;
 import com.solux.web.global.exception.CustomException;
 import com.solux.web.global.exception.ErrorCode;
@@ -54,7 +53,7 @@ public class DoctorService {
     public List<DoctorPatientResponse> getPatients(String email) {
         return doctorPatientRepository.findAllByUserEmail(email).stream()
                 .map(dp -> DoctorPatientResponse.from(
-                        patientService.getProfile(dp.getPCode()),
+                        patientService.getPatient(dp.getPCode()),
                         patientService.getPatientName(dp.getPCode())))
                 .toList();
     }

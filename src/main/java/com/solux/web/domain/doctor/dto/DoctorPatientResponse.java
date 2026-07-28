@@ -1,7 +1,7 @@
 package com.solux.web.domain.doctor.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.solux.web.domain.patient.entity.PatientProfile;
+import com.solux.web.domain.patient.entity.Patient;
 
 /**
  * 담당 환자 목록 항목.
@@ -13,7 +13,7 @@ public record DoctorPatientResponse(
         String name,
         String diagnosis
 ) {
-    public static DoctorPatientResponse from(PatientProfile profile, String name) {
-        return new DoctorPatientResponse(profile.getPCode(), name, profile.getDiagnosis());
+    public static DoctorPatientResponse from(Patient patient, String name) {
+        return new DoctorPatientResponse(patient.getPCode(), name, patient.getDiagnosis());
     }
 }
