@@ -2,6 +2,8 @@ package com.eum.hello_lux_quiz;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -10,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import com.eum.hello_lux_quiz.domain.DetailEvent;
 import com.eum.hello_lux_quiz.domain.LifeDb;
 import com.eum.hello_lux_quiz.domain.PatientProfile;
 import com.eum.hello_lux_quiz.domain.QuizItem;
@@ -17,6 +20,7 @@ import com.eum.hello_lux_quiz.domain.QuizResult;
 import com.eum.hello_lux_quiz.domain.QuizSet;
 import com.eum.hello_lux_quiz.dto.GeneratedQuizItemDto;
 import com.eum.hello_lux_quiz.dto.QuizAnswerResponse;
+import com.eum.hello_lux_quiz.repository.DetailRepository;
 import com.eum.hello_lux_quiz.repository.LifeDbRepository;
 import com.eum.hello_lux_quiz.repository.PatientProfileRepository;
 import com.eum.hello_lux_quiz.repository.QuizItemRepository;
@@ -36,6 +40,9 @@ class QuizServiceTest {
 
     @Autowired
     private LifeDbRepository lifeDbRepository;
+
+    @Autowired
+    private DetailRepository detailRepository; // 세분화 Repository 주입
 
     @Autowired
     private PatientProfileRepository patientProfileRepository;
@@ -63,14 +70,13 @@ class QuizServiceTest {
             throw new IllegalArgumentException("p_code=" + targetPCode + " 의 삶의DB 데이터가 없습니다.");
         }
 
-        // Context 조립
+        // 💡 Context 조립 (삶의DB + 세분화 사건 랜덤 3개)
         StringBuilder contextBuilder = new StringBuilder();
-        contextBuilder.append("=== 환자 회상 정보 (삶의DB) ===\n");
+        contextBuilder.append("=== 환자 회상 정보 (삶의DB 및 세분화 사건) ===\n");
         for (LifeDb memory : lifeDbList) {
             contextBuilder.append(String.format("""
                 - 고향: %s / 직업: %s / 가족: %s
-                - 좋아하는 것: %s / 주요 장소: %s / 메모: %s
-                -----------------------
+                - 좋아하는 것: %s / 주요 장소: %s / 제목: %s
                 """,
                     memory.getHometown(),
                     memory.getJob(),
@@ -79,6 +85,24 @@ class QuizServiceTest {
                     memory.getPlace(),
                     memory.getTitle()
             ));
+
+            // 세분화 목록 조회 후 랜덤 3개 추출
+            List<DetailEvent> detailList = detailRepository.findByMemoryId(memory.getMemoryId());
+            if (detailList != null && !detailList.isEmpty()) {
+                List<DetailEvent> shuffledList = new ArrayList<>(detailList);
+                Collections.shuffle(shuffledList);
+                List<DetailEvent> selectedDetails = shuffledList.stream().limit(3).toList();
+
+                contextBuilder.append("  [연관 세부 사건 (랜덤 3개)]\n");
+                for (DetailEvent detail : selectedDetails) {
+                    contextBuilder.append(String.format("  * 내용: %s / 사진URL: %s / 감정: %s\n",
+                            detail.getEvent(),
+                            detail.getPhotoUrl() != null ? detail.getPhotoUrl() : "없음",
+                            detail.getCategory()
+                    ));
+                }
+            }
+            contextBuilder.append("-----------------------\n");
         }
 
         String patientStatus = profile.getPatientStatus() != null ? profile.getPatientStatus() : "유지";
@@ -87,10 +111,10 @@ class QuizServiceTest {
         System.out.println("⏳ Rate Limit 방지를 위해 3초간 대기합니다...");
         Thread.sleep(3000);
 
-        // 2. when (Step 1): AI 퀴즈 생성
-        List<GeneratedQuizItemDto> generatedDtos = quizGeneratorService.generateQuizSet(patientStatus, profile, lifeDbContext);
+        // 2. when (Step 1): AI 퀴즈 생성 (4개 인자)
+        List<GeneratedQuizItemDto> generatedDtos = quizGeneratorService.generateQuizSet(patientStatus, profile, lifeDbContext, "");
 
-        // (1) 퀴즈 세트 DB 저장 (💡 targetPCode 그대로 전달)
+        // (1) 퀴즈 세트 DB 저장
         QuizSet quizSet = new QuizSet(
                 targetPCode,
                 LocalTime.now(),
@@ -107,12 +131,10 @@ class QuizServiceTest {
         System.out.println("==================================================");
 
         for (GeneratedQuizItemDto dto : generatedDtos) {
-            // 보기(options) 처리 (List -> JSON 문자열 또는 쉼표 구분자 문자열 변환)
             String optionsString = (dto.getOptions() != null && !dto.getOptions().isEmpty())
                     ? String.join(", ", dto.getOptions())
                     : null;
 
-            // DB 저장 (💡 savedQuizSet.getSetId() 그대로 전달)
             QuizItem quizItem = new QuizItem(
                     savedQuizSet.getSetId(),
                     targetPCode,
@@ -126,10 +148,8 @@ class QuizServiceTest {
             );
             quizItemRepository.save(quizItem);
 
-            // 임의답안 생성 (테스트용: 짝수 문제는 실제 정답을, 홀수 문제는 '잘 모르겠습니다' 오답 제출)
             String dummyUserAnswer = (dto.getQuizNum() % 2 == 0) ? dto.getAnswer() : "잘 모르겠습니다";
 
-            // LLM 채점 서비스 호출
             QuizAnswerResponse scoreResult = quizScoringService.scoreAnswer(
                     dto.getQuizComment(),
                     dto.getAnswer(),
@@ -140,7 +160,6 @@ class QuizServiceTest {
                 correctCount++;
             }
 
-            // 터미널 결과 출력
             System.out.println(String.format("""
                 [Q%d - Level %d (%s)]
                 - 질문: %s
