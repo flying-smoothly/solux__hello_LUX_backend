@@ -40,18 +40,30 @@ public class QuizGeneratorService {
     /**
      * LLM을 활용한 맞춤형 7문항 퀴즈 생성
      */
-    public List<GeneratedQuizItemDto> generateQuizSet(String patientStatus, PatientProfile profile, String lifeDbContext) {
+    public List<GeneratedQuizItemDto> generateQuizSet(
+            String patientStatus,
+            PatientProfile profile,
+            String lifeDbContext,
+            String timeOrientationInstruction) {
 
         // 1. prompt.txt 파일 불러오기
         String promptTemplate = loadPromptTemplate();
 
-        // 2. {patient_status}, {patient_name}, {personality}, {style}, {life_db_context} 플레이스홀더 치환
+        // Null 처리
+        String patientNameStr = profile.getName() != null ? profile.getName() : "";
+        String personalityStr = profile.getPersonality() != null ? profile.getPersonality() : "";
+        String styleStr = profile.getStyle() != null ? profile.getStyle() : "";
+        String lifeDbStr = lifeDbContext != null ? lifeDbContext : "";
+        String timeInstructionStr = timeOrientationInstruction != null ? timeOrientationInstruction : "";
+
+        // 2. {patient_status}, {patient_name}, {personality}, {style}, {life_db_context}, {time_orientation_instruction} 플레이스홀더 치환
         String finalPrompt = promptTemplate
                 .replace("{patient_status}", patientStatus)
-                .replace("{patient_name}", profile.getName())
-                .replace("{personality}", profile.getPersonality())
-                .replace("{style}", profile.getStyle())
-                .replace("{life_db_context}", lifeDbContext);
+                .replace("{patient_name}", patientNameStr)
+                .replace("{personality}", personalityStr)
+                .replace("{style}", styleStr)
+                .replace("{life_db_context}", lifeDbStr)
+                .replace("{time_orientation_instruction}", timeInstructionStr);
 
         // System 역할과 User 요청을 하나로 전달하거나 분리하여 전달
         String systemRole = "당신은 치매 환자를 위한 맞춤형 퀴즈를 출제하는 AI 보조관입니다. 응답은 오직 지정된 JSON 배열로만 출력하세요.";
@@ -69,3 +81,4 @@ public class QuizGeneratorService {
         }
     }
 }
+
