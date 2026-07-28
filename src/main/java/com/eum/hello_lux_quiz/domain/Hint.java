@@ -25,6 +25,10 @@ public class Hint {
     @Column(name = "set_id", nullable = false)
     private Long setId;
 
+    // 힌트 조회는 (set_id, quiz_num) 로 이뤄짐 (api 명세 기준)
+    @Column(name = "quiz_num")
+    private Integer quizNum;
+
     @Column(name = "hint_text", nullable = false, columnDefinition = "TEXT")
     private String hintText;
 }

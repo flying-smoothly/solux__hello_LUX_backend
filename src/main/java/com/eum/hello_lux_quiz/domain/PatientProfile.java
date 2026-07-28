@@ -32,7 +32,7 @@ public class PatientProfile {
     @Column(name = "personality", nullable = false, columnDefinition = "TEXT")
     private String personality;
 
-    @Column(name = "style", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "speech_style", nullable = false, columnDefinition = "TEXT")
     private String style;
 
     @Column(name = "patient_status")

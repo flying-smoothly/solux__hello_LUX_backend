@@ -3,13 +3,13 @@ package com.eum.hello_lux_quiz.domain;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "퀴즈응시")
+@Table(name = "퀴즈응시",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"set_id", "quiz_num"}))
 public class QuizItem {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "quiz_num")
-    private Integer quizNum;
+    @Column(name = "quiz_id")
+    private Integer quizId;
 
     @Column(name = "set_id", nullable = false)
     private Integer setId;
@@ -17,7 +17,10 @@ public class QuizItem {
     @Column(name = "p_code", nullable = false)
     private Integer pCode;
 
-    @Column(name = "score", nullable = false)
+    @Column(name = "quiz_num", nullable = false)
+    private Integer quizNum;
+
+    @Column(name = "score")
     private Integer score;
 
     @Column(name = "quiz_category", nullable = false, length = 50)
@@ -43,10 +46,10 @@ public class QuizItem {
     }
 
     // 수동 생성자
-    public QuizItem(Integer setId, Integer pCode, Integer score, String quizCategory, Integer level, String quizComment, String quizPhoto, String answer, String options) {
+    public QuizItem(Integer setId, Integer pCode, Integer quizNum, String quizCategory, Integer level, String quizComment, String quizPhoto, String answer, String options) {
         this.setId = setId;
         this.pCode = pCode;
-        this.score = score;
+        this.quizNum = quizNum;
         this.quizCategory = quizCategory;
         this.level = level;
         this.quizComment = quizComment;
@@ -56,8 +59,8 @@ public class QuizItem {
     }
 
     // --- 수동 Getter ---
-    public Integer getQuizNum() {
-        return quizNum;
+    public Integer getQuizId() {
+        return quizId;
     }
 
     public Integer getSetId() {

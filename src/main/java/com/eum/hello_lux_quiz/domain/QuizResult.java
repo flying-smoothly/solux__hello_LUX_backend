@@ -19,7 +19,7 @@ import java.time.LocalDate;
         @Column(name = "p_code", nullable = false)
         private Integer pCode;           // 환자코드 (FK)
 
-        @Column(name = "date", nullable = false)
+        @Column(name = "result_date", nullable = false)
         private LocalDate date;       // 날짜 (DATE 타입)
 
         @Column(name = "total_count", nullable = false)
@@ -28,10 +28,10 @@ import java.time.LocalDate;
         @Column(name = "correct_count", nullable = false)
         private int correctCount;     // 맞춘_수
 
-        @Column(name = "hint", nullable = false)
+        @Column(name = "hint_count", nullable = false)
         private int hint;             // 힌트_사용횟수
 
-        @Column(name = "caculate", columnDefinition = "TEXT", nullable = false)
+        @Column(name = "trend_calc", columnDefinition = "TEXT", nullable = false)
         private String caculate;      // 변화_계산
 
         protected QuizResult() {
