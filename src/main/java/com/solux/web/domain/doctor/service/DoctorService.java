@@ -10,7 +10,6 @@ import com.solux.web.domain.doctor.entity.PatientQuizLevel;
 import com.solux.web.domain.doctor.repository.DoctorPatientRepository;
 import com.solux.web.domain.doctor.repository.DoctorReportRepository;
 import com.solux.web.domain.doctor.repository.PatientQuizLevelRepository;
-import com.solux.web.domain.patient.entity.PatientProfile;
 import com.solux.web.domain.patient.service.PatientService;
 import com.solux.web.global.exception.CustomException;
 import com.solux.web.global.exception.ErrorCode;
@@ -53,7 +52,9 @@ public class DoctorService {
      */
     public List<DoctorPatientResponse> getPatients(String email) {
         return doctorPatientRepository.findAllByUserEmail(email).stream()
-                .map(dp -> DoctorPatientResponse.from(patientService.getProfile(dp.getPCode())))
+                .map(dp -> DoctorPatientResponse.from(
+                        patientService.getPatient(dp.getPCode()),
+                        patientService.getPatientName(dp.getPCode())))
                 .toList();
     }
 
@@ -95,11 +96,11 @@ public class DoctorService {
         validateLinked(email, pCode);
         doctorReportRepository.findByPCodeAndUserEmail(pCode, email)
                 .ifPresentOrElse(
-                        report -> report.updateContent(request.report()),
+                        report -> report.updateReport(request.report()),
                         () -> doctorReportRepository.save(DoctorReport.builder()
                                 .pCode(pCode)
                                 .userEmail(email)
-                                .content(request.report())
+                                .report(request.report())
                                 .build())
                 );
     }

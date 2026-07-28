@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 
 /**
- * 의사 진료 리포트. ERD 의 `의사_코멘트` 개념에 대응한다.
+ * 의사 진료 리포트. ERD 의 `진료_리포트` 테이블에 대응한다.
  * (의사 이메일, 환자 p_code) 당 하나의 리포트를 유지하며 작성/수정된다.
  */
 @Entity
@@ -36,22 +36,26 @@ public class DoctorReport {
     @Column(name = "user_email", nullable = false, length = 100)
     private String userEmail;
 
-    @Column(name = "content", nullable = false, columnDefinition = "TEXT")
-    private String content;
+    @Column(name = "report", nullable = false, columnDefinition = "TEXT")
+    private String report;
 
-    @Column(name = "comment_date", nullable = false)
-    private LocalDate commentDate;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDate createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private LocalDate updatedAt;
 
     @Builder
-    public DoctorReport(Integer pCode, String userEmail, String content) {
+    public DoctorReport(Integer pCode, String userEmail, String report) {
         this.pCode = pCode;
         this.userEmail = userEmail;
-        this.content = content;
-        this.commentDate = LocalDate.now();
+        this.report = report;
+        this.createdAt = LocalDate.now();
+        this.updatedAt = LocalDate.now();
     }
 
-    public void updateContent(String content) {
-        this.content = content;
-        this.commentDate = LocalDate.now();
+    public void updateReport(String report) {
+        this.report = report;
+        this.updatedAt = LocalDate.now();
     }
 }

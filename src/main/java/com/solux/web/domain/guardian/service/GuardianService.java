@@ -11,7 +11,6 @@ import com.solux.web.domain.guardian.entity.Guardian;
 import com.solux.web.domain.guardian.entity.StatusMemo;
 import com.solux.web.domain.guardian.repository.GuardianRepository;
 import com.solux.web.domain.guardian.repository.StatusMemoRepository;
-import com.solux.web.domain.patient.entity.PatientProfile;
 import com.solux.web.domain.patient.service.PatientService;
 import com.solux.web.global.exception.CustomException;
 import com.solux.web.global.exception.ErrorCode;
@@ -37,7 +36,7 @@ public class GuardianService {
      */
     @Transactional
     public LinkResponse link(String email, Integer pCode) {
-        PatientProfile profile = patientService.getProfile(pCode);
+        patientService.validateExists(pCode);
 
         if (guardianRepository.existsByPCodeAndUserEmail(pCode, email)) {
             throw new CustomException(ErrorCode.ALREADY_LINKED);
@@ -48,7 +47,7 @@ public class GuardianService {
                 .userEmail(email)
                 .build());
 
-        return new LinkResponse("연동 완료", profile.getName());
+        return new LinkResponse("연동 완료", patientService.getPatientName(pCode));
     }
 
     /**
@@ -57,9 +56,9 @@ public class GuardianService {
     public List<LinkedPatientResponse> getLinkedPatients(String email) {
         return guardianRepository.findAllByUserEmail(email).stream()
                 .map(guardian -> {
-                    PatientProfile profile = patientService.getProfile(guardian.getPCode());
-                    Integer lastScore = quizStatsPort.getLastScore(guardian.getPCode());
-                    return new LinkedPatientResponse(profile.getPCode(), profile.getName(), lastScore);
+                    Integer pCode = guardian.getPCode();
+                    Integer lastScore = quizStatsPort.getLastScore(pCode);
+                    return new LinkedPatientResponse(pCode, patientService.getPatientName(pCode), lastScore);
                 })
                 .toList();
     }

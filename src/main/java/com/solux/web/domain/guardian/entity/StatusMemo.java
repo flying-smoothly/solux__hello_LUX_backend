@@ -34,24 +34,20 @@ public class StatusMemo {
     @Column(name = "user_email", nullable = false, length = 100)
     private String userEmail;
 
-    @Column(name = "p_content", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
-
-    @Column(name = "p_change", columnDefinition = "TEXT")
-    private String change;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDate createdAt;
 
-    @Column(name = "update_at", nullable = false)
+    @Column(name = "updated_at", nullable = false)
     private LocalDate updatedAt;
 
     @Builder
-    public StatusMemo(Integer pCode, String userEmail, String content, String change) {
+    public StatusMemo(Integer pCode, String userEmail, String content) {
         this.pCode = pCode;
         this.userEmail = userEmail;
         this.content = content;
-        this.change = change;
         this.createdAt = LocalDate.now();
         this.updatedAt = LocalDate.now();
     }
