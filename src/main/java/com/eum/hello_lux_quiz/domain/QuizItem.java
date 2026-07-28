@@ -67,6 +67,12 @@ public class QuizItem {
         return setId;
     }
 
+    // quiz_llm 원본 누락 getter 보강: QuizService.java 에서 item.getQuizNum() 호출하나
+    // QuizItem 에 정의가 없어 컴파일이 실패하던 기존 버그 수정
+    public Integer getQuizNum() {
+        return quizNum;
+    }
+
     public Integer getPCode() {
         return pCode;
     }

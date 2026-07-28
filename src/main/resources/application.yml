@@ -18,7 +18,18 @@ spring:
       ddl-auto: update # 엔티티 변경 시 테이블에 자동으로 반영
     show-sql: true # 실행되는 SQL을 터미널에 출력
     database-platform: org.hibernate.dialect.MySQLDialect
+    open-in-view: false
     properties:
       hibernate:
         format_sql: true # SQL을 보기 좋게 정렬
+
+# authentication 브랜치 통합: JWT 설정
+jwt:
+  # Base64 encoded secret key (256-bit 이상). 운영 환경에서는 반드시 override.
+  secret: ${JWT_SECRET:c29sdXhXZWIyU2VjcmV0S2V5Rm9ySldUU2lnbmluZ011c3RCZUxvbmdFbm91Z2gxMjM0NTY3ODkw}
+  # Access token 유효기간(ms, 기본 24h)
+  expiration: ${JWT_EXPIRATION:86400000}
+
+server:
+  port: ${SERVER_PORT:8080}
 
