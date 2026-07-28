@@ -22,6 +22,7 @@ import java.util.List;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class QuizItemDto {
 
+    private Integer quizId;       // 전역 퀴즈 식별자 (quiz_id)
     private int quizNum;          // 퀴즈 번호 (1~7)
     private int level;            // 난이도
     private String quizCategory;  // 퀴즈 유형 (text / photo)
@@ -33,6 +34,14 @@ public class QuizItemDto {
     // ========================================================
     // 👇 IDE Lombok 인식 오류 및 타입 불일치 방지용 수동 Getter / Setter
     // ========================================================
+    public Integer getQuizId() {
+        return quizId;
+    }
+
+    public void setQuizId(Integer quizId) {
+        this.quizId = quizId;
+    }
+
     public int getQuizNum() {
         return quizNum;
     }

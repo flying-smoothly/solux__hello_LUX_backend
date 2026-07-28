@@ -54,6 +54,7 @@ public class QuizService {
             dto.setSetId(savedQuizSet.getSetId());
             dto.setPCode(pCode);
 
+            dto.setQuizId(item.getQuizId());
             dto.setQuizNum(item.getQuizNum());
             dto.setLevel(item.getLevel());
             dto.setQuizCategory(item.getQuizCategory());
