@@ -22,19 +22,19 @@ public class QuizService {
     private final QuizFeedbackRepository quizFeedbackRepository;
     private final PatientProfileRepository patientProfileRepository;
     private final LifeDbRepository lifeDbRepository;
-    private final DetailRepository detailRepository; // 세분화 Repository 추가
+    private final DetailRepository detailRepository; // 세분화 Repository
     private final QuizGeneratorService quizGeneratorService;
     private final QuizScoringService quizScoringService;
 
     public QuizService(QuizSetRepository quizSetRepository,
-            QuizItemRepository quizItemRepository,
-            QuizResultRepository quizResultRepository,
-            QuizFeedbackRepository quizFeedbackRepository,
-            PatientProfileRepository patientProfileRepository,
-            LifeDbRepository lifeDbRepository,
-            DetailRepository detailRepository,
-            QuizGeneratorService quizGeneratorService,
-            QuizScoringService quizScoringService) {
+                       QuizItemRepository quizItemRepository,
+                       QuizResultRepository quizResultRepository,
+                       QuizFeedbackRepository quizFeedbackRepository,
+                       PatientProfileRepository patientProfileRepository,
+                       LifeDbRepository lifeDbRepository,
+                       DetailRepository detailRepository,
+                       QuizGeneratorService quizGeneratorService,
+                       QuizScoringService quizScoringService) {
         this.quizSetRepository = quizSetRepository;
         this.quizItemRepository = quizItemRepository;
         this.quizResultRepository = quizResultRepository;
@@ -119,9 +119,17 @@ public class QuizService {
             dto.setQuizComment(item.getQuizComment());
             dto.setQuizPhoto(item.getQuizPhoto());
             dto.setAnswer(item.getAnswer());
+
+            // 1. 객관식 보기 (options) 매핑
             if (item.getOptions() != null && !item.getOptions().isBlank()) {
                 dto.setOptions(List.of(item.getOptions().split(",\\s*")));
             }
+
+            // 2. 💡 힌트 (hints) 매핑 추가
+            if (item.getHints() != null && !item.getHints().isBlank()) {
+                dto.setHints(List.of(item.getHints().split(",\\s*")));
+            }
+
             resultList.add(dto);
         }
 
@@ -212,7 +220,7 @@ public class QuizService {
         String todayContext = String.format("\n[현재 기준 날짜 정보: 오늘은 %d년 %d월입니다. 퀴즈 정답 생성 시 이 날짜 정보를 참고하세요.]",
                 today.getYear(), today.getMonthValue());
 
-        // LLM 퀴즈 생성 호출 (lifeDbContext에 todayContext를 결합하여 전달)
+        // LLM 퀴즈 생성 호출
         List<GeneratedQuizItemDto> generatedItems = quizGeneratorService.generateQuizSet(
                 patientStatus, profile, finalContext + todayContext, timeOrientationInstruction
         );
@@ -225,6 +233,12 @@ public class QuizService {
                     ? String.join(", ", dto.getOptions())
                     : null;
 
+            // 💡 [추가] 힌트 List -> Comma 구분자 String으로 변환
+            String hintsString = (dto.getHints() != null && !dto.getHints().isEmpty())
+                    ? String.join(", ", dto.getHints())
+                    : null;
+
+            // QuizItem Entity 저장 (QuizItem 생성자 구현 방식에 맞추어 생성)
             QuizItem item = new QuizItem(
                     savedQuizSet.getSetId(),
                     pCode,
@@ -234,7 +248,8 @@ public class QuizService {
                     dto.getQuizComment(),
                     dto.getQuizPhoto(),
                     dto.getAnswer(),
-                    optionsString
+                    optionsString,
+                    hintsString // 💡 hintsString 전달
             );
 
             quizItemRepository.save(item);
