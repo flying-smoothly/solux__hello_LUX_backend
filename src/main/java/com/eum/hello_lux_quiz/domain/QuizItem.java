@@ -41,12 +41,20 @@ public class QuizItem {
     @Column(name = "options", columnDefinition = "TEXT")
     private String options; // 객관식 보기 컬럼
 
+    @Column(name = "hints", columnDefinition = "TEXT")
+    private String hints; / 힌트 컬럼 추가 
+
     // JPA용 기본 생성자
     protected QuizItem() {
     }
 
-    // 수동 생성자
+    // 기존 생성자 (호환용이 필요할 경우 남겨둠)
     public QuizItem(Integer setId, Integer pCode, Integer quizNum, String quizCategory, Integer level, String quizComment, String quizPhoto, String answer, String options) {
+        this(setId, pCode, quizNum, quizCategory, level, quizComment, quizPhoto, answer, options, null);
+    }
+
+    // 힌트 포함 수동 생성자
+    public QuizItem(Integer setId, Integer pCode, Integer quizNum, String quizCategory, Integer level, String quizComment, String quizPhoto, String answer, String options, String hints) {
         this.setId = setId;
         this.pCode = pCode;
         this.quizNum = quizNum;
@@ -56,6 +64,7 @@ public class QuizItem {
         this.quizPhoto = quizPhoto;
         this.answer = answer;
         this.options = options;
+        this.hints = hints;
     }
 
     // --- 수동 Getter ---
@@ -73,6 +82,10 @@ public class QuizItem {
 
     public Integer getpCode() {
         return pCode; // Lombok 네이밍 호환용
+    }
+
+    public Integer getQuizNum() {
+        return quizNum;
     }
 
     public Integer getScore() {
@@ -101,5 +114,9 @@ public class QuizItem {
 
     public String getOptions() {
         return options;
+    }
+
+    public String getHints() {
+        return hints;
     }
 }
