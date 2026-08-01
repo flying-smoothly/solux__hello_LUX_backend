@@ -70,7 +70,7 @@ class QuizServiceTest {
             throw new IllegalArgumentException("p_code=" + targetPCode + " 의 삶의DB 데이터가 없습니다.");
         }
 
-        // 💡 Context 조립 (삶의DB + 세분화 사건 랜덤 3개)
+        //  Context 조립 (삶의DB + 세분화 사건 랜덤 3개)
         StringBuilder contextBuilder = new StringBuilder();
         contextBuilder.append("=== 환자 회상 정보 (삶의DB 및 세분화 사건) ===\n");
         for (LifeDb memory : lifeDbList) {
@@ -131,10 +131,17 @@ class QuizServiceTest {
         System.out.println("==================================================");
 
         for (GeneratedQuizItemDto dto : generatedDtos) {
+            // options와 hints를 DB 저장을 위한 문자열 형태로 변환
             String optionsString = (dto.getOptions() != null && !dto.getOptions().isEmpty())
                     ? String.join(", ", dto.getOptions())
                     : null;
 
+            String hintsString = (dto.getHints() != null && !dto.getHints().isEmpty())
+                    ? String.join(", ", dto.getHints())
+                    : null;
+
+            // QuizItem Entity 생성 및 DB 저장
+            // (QuizItem Entity 생성자 파라미터 순서에 hintsString이 들어가는지 점검 필요)
             QuizItem quizItem = new QuizItem(
                     savedQuizSet.getSetId(),
                     targetPCode,
@@ -145,6 +152,7 @@ class QuizServiceTest {
                     dto.getQuizPhoto(),
                     dto.getAnswer(),
                     optionsString
+                    // hintsString  <-- QuizItem Entity에 hints 필드가 정의되어 있다면 여기에 추가!
             );
             quizItemRepository.save(quizItem);
 
