@@ -7,8 +7,10 @@ import com.eum.hello_lux_quiz.domain.guardian.dto.LinkedPatientResponse;
 import com.eum.hello_lux_quiz.domain.guardian.dto.MemoCreateResponse;
 import com.eum.hello_lux_quiz.domain.guardian.dto.MemoRequest;
 import com.eum.hello_lux_quiz.domain.guardian.dto.MemoResponse;
+import com.eum.hello_lux_quiz.domain.guardian.dto.PatientInfoRequest;
 import com.eum.hello_lux_quiz.domain.guardian.dto.TrendResponse;
 import com.eum.hello_lux_quiz.domain.guardian.service.GuardianService;
+import com.eum.hello_lux_quiz.domain.patient.dto.PatientInfoResponse;
 import com.eum.hello_lux_quiz.global.common.SecurityUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -47,6 +50,15 @@ public class GuardianController {
     @GetMapping("/{pCode}/dashboard")
     public ResponseEntity<DashboardResponse> getDashboard(@PathVariable Integer pCode) {
         return ResponseEntity.ok(guardianService.getDashboard(SecurityUtil.getCurrentEmail(), pCode));
+    }
+
+    /** 보호자가 환자 정보 입력/수정 */
+    @PutMapping("/{pCode}/patient-info")
+    public ResponseEntity<PatientInfoResponse> updatePatientInfo(
+            @PathVariable Integer pCode,
+            @RequestBody PatientInfoRequest request) {
+        return ResponseEntity.ok(
+                guardianService.updatePatientInfo(SecurityUtil.getCurrentEmail(), pCode, request));
     }
 
     /** 환자 상태 메모 작성 */

@@ -77,4 +77,21 @@ public class Patient {
             this.speechStyle = speechStyle;
         }
     }
+    /**
+     * 보호자가 환자 정보를 대신 입력/수정할 때 사용. 전달된(비어있지 않은) 필드만 반영한다.
+     */
+    public void updateInfo(String gender, String diagnosis, String personality, String speechStyle) {
+        if (gender != null && !gender.isBlank()) {
+            this.gender = gender;
+        }
+        if (diagnosis != null && !diagnosis.isBlank()) {
+            this.diagnosis = diagnosis;
+        }
+        if (personality != null && !personality.isBlank()) {
+            this.personality = personality;
+        }
+        if (speechStyle != null && !speechStyle.isBlank()) {
+            this.speechStyle = speechStyle;
+        }
+    }
 }

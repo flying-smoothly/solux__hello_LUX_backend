@@ -1,17 +1,24 @@
 package com.eum.hello_lux_quiz.domain.patient.service;
 
 import com.eum.hello_lux_quiz.domain.member.repository.MemberRepository;
+import com.eum.hello_lux_quiz.domain.patient.dto.DailyStatusRequest;
+import com.eum.hello_lux_quiz.domain.patient.dto.DailyStatusResponse;
 import com.eum.hello_lux_quiz.domain.patient.dto.PatientInfoResponse;
 import com.eum.hello_lux_quiz.domain.patient.dto.PatientRegisterRequest;
 import com.eum.hello_lux_quiz.domain.patient.dto.PatientRegisterResponse;
 import com.eum.hello_lux_quiz.domain.patient.dto.PatientUpdateRequest;
 import com.eum.hello_lux_quiz.domain.patient.entity.Patient;
+import com.eum.hello_lux_quiz.domain.patient.entity.PatientDailyStatus;
+import com.eum.hello_lux_quiz.domain.patient.repository.PatientDailyStatusRepository;
 import com.eum.hello_lux_quiz.domain.patient.repository.PatientRepository;
 import com.eum.hello_lux_quiz.global.exception.CustomException;
 import com.eum.hello_lux_quiz.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.List;
 
 // quiz_llm 의 service.PatientService 와 빈 이름이 겹치지 않도록 명시적 이름 지정
 @Service("authPatientService")
@@ -21,6 +28,7 @@ public class PatientService {
 
     private final PatientRepository patientRepository;
     private final MemberRepository memberRepository;
+    private final PatientDailyStatusRepository patientDailyStatusRepository;
 
     /**
      * 환자 기본 정보 등록. 환자 코드(p_code)를 발급하며 상세 정보를 함께 저장한다.
@@ -72,6 +80,70 @@ public class PatientService {
     public Integer getCode(String email, Integer pCode) {
         validateOwner(email, pCode);
         return pCode;
+    }
+
+       // ===== 환자 일일 상태(건강 체크) 입력 =====
+
+    /**
+     * 환자 본인이 오늘의 상태(건강/수면/식사/통증/기분/인지 변화)를 입력한다.
+     * 하루 1건을 유지하며, 같은 날 재입력 시 기존 기록을 갱신한다.
+     */
+    @Transactional
+    public DailyStatusResponse saveDailyStatus(String email, Integer pCode, DailyStatusRequest request) {
+        validateOwner(email, pCode);
+
+        LocalDate today = LocalDate.now();
+        String cognitiveChanges = joinCognitiveChanges(request.cognitiveChanges());
+
+        PatientDailyStatus status = patientDailyStatusRepository
+                .findByPCodeAndRecordDate(pCode, today)
+                .map(existing -> {
+                    existing.update(request.healthCondition(), request.sleepStatus(),
+                            request.mealStatus(), request.painStatus(),
+                            request.moodStatus(), cognitiveChanges);
+                    return existing;
+                })
+                .orElseGet(() -> patientDailyStatusRepository.save(PatientDailyStatus.builder()
+                        .pCode(pCode)
+                        .recordDate(today)
+                        .healthCondition(request.healthCondition())
+                        .sleepStatus(request.sleepStatus())
+                        .mealStatus(request.mealStatus())
+                        .painStatus(request.painStatus())
+                        .moodStatus(request.moodStatus())
+                        .cognitiveChanges(cognitiveChanges)
+                        .build()));
+
+        return DailyStatusResponse.from(status);
+    }
+
+    /**
+     * 특정 날짜(기본 오늘)의 상태 조회. 환자/보호자/의사 공통.
+     */
+    public DailyStatusResponse getDailyStatus(Integer pCode, LocalDate date) {
+        validateExists(pCode);
+        LocalDate target = (date != null) ? date : LocalDate.now();
+        PatientDailyStatus status = patientDailyStatusRepository
+                .findByPCodeAndRecordDate(pCode, target)
+                .orElseThrow(() -> new CustomException(ErrorCode.DAILY_STATUS_NOT_FOUND));
+        return DailyStatusResponse.from(status);
+    }
+
+    /**
+     * 상태 기록 전체 목록(최신순).
+     */
+    public List<DailyStatusResponse> getDailyStatusHistory(Integer pCode) {
+        validateExists(pCode);
+        return patientDailyStatusRepository.findAllByPCodeOrderByRecordDateDesc(pCode).stream()
+                .map(DailyStatusResponse::from)
+                .toList();
+    }
+
+    private String joinCognitiveChanges(List<String> changes) {
+        if (changes == null || changes.isEmpty()) {
+            return null;
+        }
+        return String.join(",", changes);
     }
 
     // ===== 다른 도메인에서 재사용하는 헬퍼 =====

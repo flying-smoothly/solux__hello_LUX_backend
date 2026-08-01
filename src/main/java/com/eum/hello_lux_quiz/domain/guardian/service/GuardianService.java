@@ -6,10 +6,13 @@ import com.eum.hello_lux_quiz.domain.guardian.dto.LinkedPatientResponse;
 import com.eum.hello_lux_quiz.domain.guardian.dto.MemoCreateResponse;
 import com.eum.hello_lux_quiz.domain.guardian.dto.MemoRequest;
 import com.eum.hello_lux_quiz.domain.guardian.dto.MemoResponse;
+import com.eum.hello_lux_quiz.domain.guardian.dto.PatientInfoRequest;
 import com.eum.hello_lux_quiz.domain.guardian.dto.TrendResponse;
 import com.eum.hello_lux_quiz.domain.guardian.entity.Guardian;
 import com.eum.hello_lux_quiz.domain.guardian.entity.StatusMemo;
 import com.eum.hello_lux_quiz.domain.guardian.repository.GuardianRepository;
+import com.eum.hello_lux_quiz.domain.patient.dto.PatientInfoResponse;
+import com.eum.hello_lux_quiz.domain.patient.entity.Patient;
 import com.eum.hello_lux_quiz.domain.guardian.repository.StatusMemoRepository;
 import com.eum.hello_lux_quiz.domain.patient.service.PatientService;
 import com.eum.hello_lux_quiz.global.exception.CustomException;
@@ -85,6 +88,20 @@ public class GuardianService {
                 quizStatsPort.getTrendScores(pCode, period)
         );
     }
+
+    /**
+     * 보호자가 연동된 환자의 정보를 대신 입력/수정한다.
+     * (성별/진단명/성격/말투 — 전달된 필드만 반영)
+     */
+    @Transactional
+    public PatientInfoResponse updatePatientInfo(String email, Integer pCode, PatientInfoRequest request) {
+        validateLinked(email, pCode);
+        Patient patient = patientService.getPatient(pCode);
+        patient.updateInfo(request.gender(), request.diagnosis(),
+                request.personality(), request.speechStyle());
+        return patientService.getInfo(pCode);
+    }
+
 
     /**
      * 환자 상태 메모 작성.
