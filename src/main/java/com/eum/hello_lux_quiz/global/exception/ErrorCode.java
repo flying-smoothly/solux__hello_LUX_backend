@@ -20,7 +20,8 @@ public enum ErrorCode {
     // 환자
     PATIENT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 환자입니다."),
     PATIENT_ALREADY_REGISTERED(HttpStatus.CONFLICT, "이미 등록된 환자 정보입니다."),
-
+    DAILY_STATUS_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 날짜의 상태 기록이 없습니다."),
+    
     // 연동
     ALREADY_LINKED(HttpStatus.CONFLICT, "이미 연동된 환자입니다."),
     LINK_NOT_FOUND(HttpStatus.NOT_FOUND, "연동 정보가 존재하지 않습니다."),

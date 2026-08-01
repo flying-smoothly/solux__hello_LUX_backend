@@ -90,7 +90,7 @@ public class QuizService {
      */
     @Transactional
     public void submitQuizResult(QuizResultSubmitRequest request, String lifeDbContext) {
-        // (1) 퀴즈 결과 DB 저장
+        // (1) 퀴즈 결과 DB 저장 (성공률/힌트 사용여부/응답 시간/건강·수면·감정 상태 포함)
         QuizResult quizResult = new QuizResult(
                 request.getSetId(),
                 request.getPCode(),
@@ -98,7 +98,13 @@ public class QuizService {
                 request.getTotalCount(),
                 request.getCorrectCount(),
                 request.getHint(),
-                request.getCaculate()
+                request.getCaculate(),
+                request.getSuccessRate(),
+                request.getHintUsed(),
+                request.getAvgResponseTime(),
+                request.getHealthStatus(),
+                request.getSleepStatus(),
+                request.getEmotionStatus()
         );
         quizResultRepository.save(quizResult);
 

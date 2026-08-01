@@ -27,6 +27,24 @@ public class QuizResultResponse {
     @JsonProperty("total_score")
     private Integer totalScore;
 
+    @JsonProperty("success_rate")
+    private Integer successRate;
+
+    @JsonProperty("hint_used")
+    private Boolean hintUsed;
+
+    @JsonProperty("avg_response_time")
+    private Integer avgResponseTime;
+
+    @JsonProperty("health_status")
+    private String healthStatus;
+
+    @JsonProperty("sleep_status")
+    private String sleepStatus;
+
+    @JsonProperty("emotion_status")
+    private String emotionStatus;
+
     public static QuizResultResponse from(QuizResult entity, Integer totalScore) {
         return QuizResultResponse.builder()
                 .date(entity.getDate())
@@ -35,6 +53,12 @@ public class QuizResultResponse {
                 .hint(entity.getHint())
                 .calculate(entity.getCaculate())
                 .totalScore(totalScore)
+                .successRate(entity.getSuccessRate())
+                .hintUsed(entity.getHintUsed())
+                .avgResponseTime(entity.getAvgResponseTime())
+                .healthStatus(entity.getHealthStatus())
+                .sleepStatus(entity.getSleepStatus())
+                .emotionStatus(entity.getEmotionStatus())
                 .build();
     }
 }
