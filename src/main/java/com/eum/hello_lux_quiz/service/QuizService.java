@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -20,23 +21,76 @@ public class QuizService {
     private final QuizResultRepository quizResultRepository;
     private final QuizFeedbackRepository quizFeedbackRepository;
     private final PatientProfileRepository patientProfileRepository;
+    private final LifeDbRepository lifeDbRepository;
+    private final DetailRepository detailRepository; // 세분화 Repository
     private final QuizGeneratorService quizGeneratorService;
     private final QuizScoringService quizScoringService;
 
     public QuizService(QuizSetRepository quizSetRepository,
-            QuizItemRepository quizItemRepository,
-            QuizResultRepository quizResultRepository,
-            QuizFeedbackRepository quizFeedbackRepository,
-            PatientProfileRepository patientProfileRepository,
-            QuizGeneratorService quizGeneratorService,
-            QuizScoringService quizScoringService) {
+                       QuizItemRepository quizItemRepository,
+                       QuizResultRepository quizResultRepository,
+                       QuizFeedbackRepository quizFeedbackRepository,
+                       PatientProfileRepository patientProfileRepository,
+                       LifeDbRepository lifeDbRepository,
+                       DetailRepository detailRepository,
+                       QuizGeneratorService quizGeneratorService,
+                       QuizScoringService quizScoringService) {
         this.quizSetRepository = quizSetRepository;
         this.quizItemRepository = quizItemRepository;
         this.quizResultRepository = quizResultRepository;
         this.quizFeedbackRepository = quizFeedbackRepository;
         this.patientProfileRepository = patientProfileRepository;
+        this.lifeDbRepository = lifeDbRepository;
+        this.detailRepository = detailRepository;
         this.quizGeneratorService = quizGeneratorService;
         this.quizScoringService = quizScoringService;
+    }
+
+    /**
+     * DB에서 삶의DB + 세분화(랜덤 3개) 정보를 조회하여 Context 문자열을 생성하는 메서드
+     */
+    public String buildLifeDbContext(Integer pCode) {
+        List<LifeDb> lifeDbList = lifeDbRepository.findByPCode(pCode);
+        if (lifeDbList.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder contextBuilder = new StringBuilder();
+        contextBuilder.append("=== 환자 회상 정보 (삶의DB 및 세분화 사건) ===\n");
+
+        for (LifeDb memory : lifeDbList) {
+            contextBuilder.append(String.format("""
+                - 고향: %s / 직업: %s / 가족: %s
+                - 좋아하는 것: %s / 주요 장소: %s / 제목: %s
+                """,
+                    memory.getHometown(),
+                    memory.getJob(),
+                    memory.getFamily(),
+                    memory.getLikes(),
+                    memory.getPlace(),
+                    memory.getTitle()
+            ));
+
+            // 세분화(DetailEvent) 데이터 조회 후 셔플 -> 최대 3개 선택
+            List<DetailEvent> detailList = detailRepository.findByMemoryId(memory.getMemoryId());
+            if (detailList != null && !detailList.isEmpty()) {
+                List<DetailEvent> shuffledList = new ArrayList<>(detailList);
+                Collections.shuffle(shuffledList);
+                List<DetailEvent> selectedDetails = shuffledList.stream().limit(3).toList();
+
+                contextBuilder.append("  [연관 세부 사건 (랜덤 3개)]\n");
+                for (DetailEvent detail : selectedDetails) {
+                    contextBuilder.append(String.format("  * 내용: %s / 사진URL: %s / 감정: %s\n",
+                            detail.getEvent(),
+                            detail.getPhotoUrl() != null ? detail.getPhotoUrl() : "없음",
+                            detail.getCategory()
+                    ));
+                }
+            }
+            contextBuilder.append("-----------------------\n");
+        }
+
+        return contextBuilder.toString();
     }
 
     /**
@@ -44,7 +98,12 @@ public class QuizService {
      */
     @Transactional
     public List<QuizItemDto> getOrCreateTodayQuiz(Integer pCode, String lifeDbContext) {
-        QuizSet savedQuizSet = createQuizSet(pCode, lifeDbContext);
+        // lifeDbContext가 외부에서 전달되지 않은 경우 자동 생성
+        String finalContext = (lifeDbContext != null && !lifeDbContext.isBlank())
+                ? lifeDbContext
+                : buildLifeDbContext(pCode);
+
+        QuizSet savedQuizSet = createQuizSet(pCode, finalContext);
         List<QuizItem> items = quizItemRepository.findBySetId(savedQuizSet.getSetId());
 
         List<QuizItemDto> resultList = new ArrayList<>();
@@ -54,16 +113,23 @@ public class QuizService {
             dto.setSetId(savedQuizSet.getSetId());
             dto.setPCode(pCode);
 
-            dto.setQuizId(item.getQuizId());
             dto.setQuizNum(item.getQuizNum());
             dto.setLevel(item.getLevel());
             dto.setQuizCategory(item.getQuizCategory());
             dto.setQuizComment(item.getQuizComment());
             dto.setQuizPhoto(item.getQuizPhoto());
             dto.setAnswer(item.getAnswer());
+
+            // 1. 객관식 보기 (options) 매핑
             if (item.getOptions() != null && !item.getOptions().isBlank()) {
                 dto.setOptions(List.of(item.getOptions().split(",\\s*")));
             }
+
+            // 2. 💡 힌트 (hints) 매핑 추가
+            if (item.getHints() != null && !item.getHints().isBlank()) {
+                dto.setHints(List.of(item.getHints().split(",\\s*")));
+            }
+
             resultList.add(dto);
         }
 
@@ -90,7 +156,7 @@ public class QuizService {
      */
     @Transactional
     public void submitQuizResult(QuizResultSubmitRequest request, String lifeDbContext) {
-        // (1) 퀴즈 결과 DB 저장 (성공률/힌트 사용여부/응답 시간/건강·수면·감정 상태 포함)
+        // (1) 퀴즈 결과 DB 저장
         QuizResult quizResult = new QuizResult(
                 request.getSetId(),
                 request.getPCode(),
@@ -98,13 +164,7 @@ public class QuizService {
                 request.getTotalCount(),
                 request.getCorrectCount(),
                 request.getHint(),
-                request.getCaculate(),
-                request.getSuccessRate(),
-                request.getHintUsed(),
-                request.getAvgResponseTime(),
-                request.getHealthStatus(),
-                request.getSleepStatus(),
-                request.getEmotionStatus()
+                request.getCaculate()
         );
         quizResultRepository.save(quizResult);
 
@@ -118,8 +178,13 @@ public class QuizService {
             quizFeedbackRepository.save(quizFeedback);
         }
 
+        // Context 가 비어있다면 새로 빌드
+        String finalContext = (lifeDbContext != null && !lifeDbContext.isBlank())
+                ? lifeDbContext
+                : buildLifeDbContext(request.getPCode());
+
         // (3) 다음 풀 퀴즈 세트 미리 자동 생성
-        createQuizSet(request.getPCode(), lifeDbContext);
+        createQuizSet(request.getPCode(), finalContext);
     }
 
     /**
@@ -127,6 +192,14 @@ public class QuizService {
      */
     @Transactional
     public QuizSet createQuizSet(Integer pCode, String lifeDbContext) {
+        // Context가 비어있는 경우 세분화 포함 Context 자동 빌드
+        String finalContext = (lifeDbContext != null && !lifeDbContext.isBlank())
+                ? lifeDbContext
+                : buildLifeDbContext(pCode);
+
+        // 1. 이번에 생성될 세트 순번 계산 (기존 세트 수 + 1)
+        int nextSetCount = quizSetRepository.countByPCode(pCode) + 1;
+
         QuizSet quizSet = new QuizSet(pCode, LocalTime.now(), LocalTime.now(), 0);
         QuizSet savedQuizSet = quizSetRepository.save(quizSet);
 
@@ -136,8 +209,21 @@ public class QuizService {
 
         String patientStatus = profile.getPatientStatus() != null ? profile.getPatientStatus() : "유지";
 
+        // 2. 4번째 세트 주기마다 지남력 평가 질문 포함 지시문 작성
+        String timeOrientationInstruction = "";
+        if (nextSetCount % 4 == 0) {
+            timeOrientationInstruction = "★ [지남력 질문 필수 포함]: 이번 세트는 4세트 주기에 해당하므로, Level 3 문항 중 1개는 반드시 현재 또는 과거 특정 시점의 [년, 월, 계절]을 묻는 질문(시간 지남력 평가)으로 출제하세요. (단, 날짜 오차 방지를 위해 특정 '일자'보다는 '년/월/계절' 위주로 출제)";
+        }
+
+        // 3. LLM에게 현재 날짜 정보를 제공하기 위한 Context 생성
+        LocalDate today = LocalDate.now();
+        String todayContext = String.format("\n[현재 기준 날짜 정보: 오늘은 %d년 %d월입니다. 퀴즈 정답 생성 시 이 날짜 정보를 참고하세요.]",
+                today.getYear(), today.getMonthValue());
+
         // LLM 퀴즈 생성 호출
-        List<GeneratedQuizItemDto> generatedItems = quizGeneratorService.generateQuizSet(patientStatus, profile, lifeDbContext);
+        List<GeneratedQuizItemDto> generatedItems = quizGeneratorService.generateQuizSet(
+                patientStatus, profile, finalContext + todayContext, timeOrientationInstruction
+        );
 
         int quizNumCounter = 1;
         for (GeneratedQuizItemDto dto : generatedItems) {
@@ -147,6 +233,12 @@ public class QuizService {
                     ? String.join(", ", dto.getOptions())
                     : null;
 
+            // 💡 [추가] 힌트 List -> Comma 구분자 String으로 변환
+            String hintsString = (dto.getHints() != null && !dto.getHints().isEmpty())
+                    ? String.join(", ", dto.getHints())
+                    : null;
+
+            // QuizItem Entity 저장 (QuizItem 생성자 구현 방식에 맞추어 생성)
             QuizItem item = new QuizItem(
                     savedQuizSet.getSetId(),
                     pCode,
@@ -156,7 +248,8 @@ public class QuizService {
                     dto.getQuizComment(),
                     dto.getQuizPhoto(),
                     dto.getAnswer(),
-                    optionsString
+                    optionsString,
+                    hintsString // 💡 hintsString 전달
             );
 
             quizItemRepository.save(item);
@@ -187,7 +280,6 @@ public class QuizService {
         return list;
     }
 
-    //  from, to 파라미터 수신 및 조건부 조회 구현
     public List<QuizResultResponse> getAllQuizResultsByPCode(Integer pCode, LocalDate from, LocalDate to) {
         List<QuizResult> results;
 
