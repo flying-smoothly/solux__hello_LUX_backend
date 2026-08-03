@@ -36,14 +36,14 @@ public class DoctorService {
      * 의사-환자 연동.
      */
     @Transactional
-    public void link(String email, Integer pCode) {
-        patientService.validateExists(pCode);
-        if (doctorPatientRepository.existsByPCodeAndUserEmail(pCode, email)) {
+    public void link(String userId, String patientCode) {
+        Integer pCode = patientService.resolvePCode(patientCode);
+        if (doctorPatientRepository.existsByPCodeAndUserId(pCode, userId)) {
             throw new CustomException(ErrorCode.ALREADY_LINKED);
         }
         doctorPatientRepository.save(DoctorPatient.builder()
                 .pCode(pCode)
-                .userEmail(email)
+                .userId(userId)
                 .build());
     }
 
@@ -51,7 +51,7 @@ public class DoctorService {
      * 담당 환자 목록 조회.
      */
     public List<DoctorPatientResponse> getPatients(String email) {
-        return doctorPatientRepository.findAllByUserEmail(email).stream()
+        return doctorPatientRepository.findAllByUserId(email).stream()
                 .map(dp -> DoctorPatientResponse.from(
                         patientService.getPatient(dp.getPCode()),
                         patientService.getPatientName(dp.getPCode())))
@@ -94,12 +94,12 @@ public class DoctorService {
     @Transactional
     public void saveReport(String email, Integer pCode, ReportUpdateRequest request) {
         validateLinked(email, pCode);
-        doctorReportRepository.findByPCodeAndUserEmail(pCode, email)
+        doctorReportRepository.findByPCodeAndUserId(pCode, email)
                 .ifPresentOrElse(
                         report -> report.updateReport(request.report()),
                         () -> doctorReportRepository.save(DoctorReport.builder()
                                 .pCode(pCode)
-                                .userEmail(email)
+                                .userId(email)
                                 .report(request.report())
                                 .build())
                 );
@@ -107,7 +107,7 @@ public class DoctorService {
 
     private void validateLinked(String email, Integer pCode) {
         patientService.validateExists(pCode);
-        if (!doctorPatientRepository.existsByPCodeAndUserEmail(pCode, email)) {
+        if (!doctorPatientRepository.existsByPCodeAndUserId(pCode, email)) {
             throw new CustomException(ErrorCode.LINK_NOT_FOUND);
         }
     }

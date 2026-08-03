@@ -8,10 +8,9 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface DoctorPatientRepository extends JpaRepository<DoctorPatient, Long> {
-
-    List<DoctorPatient> findAllByUserEmail(String userEmail);
+    List<DoctorPatient> findAllByUserId(String userId);
 
     // 필드명이 pCode 라 파생 쿼리 파싱 이슈가 있어 JPQL 로 명시한다.
-    @Query("select count(dp) > 0 from DoctorPatient dp where dp.pCode = :pCode and dp.userEmail = :userEmail")
-    boolean existsByPCodeAndUserEmail(@Param("pCode") Integer pCode, @Param("userEmail") String userEmail);
+    @Query("select count(dp) > 0 from DoctorPatient dp where dp.pCode = :pCode and dp.userId = :userId")
+    boolean existsByPCodeAndUserId(@Param("pCode") Integer pCode, @Param("userId") String userId);
 }

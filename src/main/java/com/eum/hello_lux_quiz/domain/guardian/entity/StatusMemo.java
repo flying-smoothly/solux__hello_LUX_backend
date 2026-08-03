@@ -30,8 +30,8 @@ public class StatusMemo {
     @Column(name = "p_code", nullable = false)
     private Integer pCode;
 
-    @Column(name = "user_email", nullable = false, length = 100)
-    private String userEmail;
+    @Column(name = "user_id", nullable = false, length = 100)
+    private String user_id;
 
    /** 기록 대상 날짜 (보호자가 직접 선택) */
     @Column(name = "record_date", nullable = false)
@@ -76,12 +76,12 @@ public class StatusMemo {
     private LocalDate updatedAt;
 
     @Builder
-   public StatusMemo(Integer pCode, String userEmail, LocalDate recordDate,
+   public StatusMemo(Integer pCode, String user_id, LocalDate recordDate,
                       String healthStatus, String sleepStatus, String mealStatus,
                       String painStatus, String moodStatus, String behaviors,
                       boolean needReferral, String content) {
         this.pCode = pCode;
-        this.userEmail = userEmail;
+        this.user_id = user_id;
         this.recordDate = (recordDate != null) ? recordDate : LocalDate.now();
         this.healthStatus = healthStatus;
         this.sleepStatus = sleepStatus;

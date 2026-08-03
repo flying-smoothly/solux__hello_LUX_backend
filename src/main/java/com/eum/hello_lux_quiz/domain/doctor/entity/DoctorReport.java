@@ -21,7 +21,7 @@ import java.time.LocalDate;
 @Entity
 @Getter
 @Table(name = "doctor_report",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"p_code", "user_email"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"p_code", "user_id"}))
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DoctorReport {
 
@@ -33,8 +33,8 @@ public class DoctorReport {
     @Column(name = "p_code", nullable = false)
     private Integer pCode;
 
-    @Column(name = "user_email", nullable = false, length = 100)
-    private String userEmail;
+    @Column(name = "user_id", nullable = false, length = 100)
+    private String userId;
 
     @Column(name = "report", nullable = false, columnDefinition = "TEXT")
     private String report;
@@ -46,9 +46,9 @@ public class DoctorReport {
     private LocalDate updatedAt;
 
     @Builder
-    public DoctorReport(Integer pCode, String userEmail, String report) {
+    public DoctorReport(Integer pCode, String userId, String report) {
         this.pCode = pCode;
-        this.userEmail = userEmail;
+        this.userId = userId;
         this.report = report;
         this.createdAt = LocalDate.now();
         this.updatedAt = LocalDate.now();

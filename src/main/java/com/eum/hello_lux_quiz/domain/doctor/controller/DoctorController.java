@@ -32,20 +32,20 @@ public class DoctorController {
     /** 의사-환자 연동 */
     @PostMapping("/link")
     public ResponseEntity<MessageResponse> link(@Valid @RequestBody DoctorLinkRequest request) {
-        doctorService.link(SecurityUtil.getCurrentEmail(), request.pCode());
+        doctorService.link(SecurityUtil.getCurrentUserId(), request.patientCode());
         return ResponseEntity.ok(MessageResponse.of("연동 완료"));
     }
 
     /** 담당 환자 목록 조회 */
     @GetMapping("/patients")
     public ResponseEntity<List<DoctorPatientResponse>> getPatients() {
-        return ResponseEntity.ok(doctorService.getPatients(SecurityUtil.getCurrentEmail()));
+        return ResponseEntity.ok(doctorService.getPatients(SecurityUtil.getCurrentUserId()));
     }
 
     /** 진료 참고 리포트 조회 */
     @GetMapping("/{pCode}/report")
     public ResponseEntity<ReportResponse> getReport(@PathVariable Integer pCode) {
-        return ResponseEntity.ok(doctorService.getReport(SecurityUtil.getCurrentEmail(), pCode));
+        return ResponseEntity.ok(doctorService.getReport(SecurityUtil.getCurrentUserId(), pCode));
     }
 
     /** 난이도 조절 */
@@ -53,7 +53,7 @@ public class DoctorController {
     public ResponseEntity<MessageResponse> updateLevel(
             @PathVariable Integer pCode,
             @Valid @RequestBody LevelRequest request) {
-        doctorService.updateLevel(SecurityUtil.getCurrentEmail(), pCode, request);
+        doctorService.updateLevel(SecurityUtil.getCurrentUserId(), pCode, request);
         return ResponseEntity.ok(MessageResponse.of("난이도 변경 완료"));
     }
 
@@ -62,7 +62,7 @@ public class DoctorController {
     public ResponseEntity<MessageResponse> saveReport(
             @PathVariable Integer pCode,
             @Valid @RequestBody ReportUpdateRequest request) {
-        doctorService.saveReport(SecurityUtil.getCurrentEmail(), pCode, request);
+        doctorService.saveReport(SecurityUtil.getCurrentUserId(), pCode, request);
         return ResponseEntity.ok(MessageResponse.of("리포트 저장 완료"));
     }
 }

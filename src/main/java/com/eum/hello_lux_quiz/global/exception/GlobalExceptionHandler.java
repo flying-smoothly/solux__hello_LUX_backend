@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining(", "));
         return ResponseEntity.badRequest()
-                .body(ErrorResponse.of(ErrorCode.INVALID_INPUT.getStatus().value(), message));
+                .body(ErrorResponse.of(message));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -36,6 +36,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception e) {
         return ResponseEntity.internalServerError()
-                .body(ErrorResponse.of(500, "서버 오류가 발생했습니다."));
+                .body(ErrorResponse.of("서버 오류가 발생했습니다."));
     }
 }

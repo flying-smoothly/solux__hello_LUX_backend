@@ -1,34 +1,38 @@
 package com.eum.hello_lux_quiz.domain.member.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 
 import java.time.LocalDate;
 
 /**
  * 회원가입 요청.
- * 예: {"user_email":"user@email.com","user_pw":"1234","role":"patient","name":"홍길동","birth_date":"1950-01-01"}
+ * 역할(role)은 가입 이후 별도 API(PATCH /api/auth/role)로 설정하므로 여기서 받지 않는다.
+ * 예: {"user_id":"hong1234","user_pw":"12345678","name":"홍길동","birth_date":"1950-01-01","phone":"01012345678"}
  */
 public record RegisterRequest(
-        @JsonProperty("user_email")
-        @NotBlank(message = "이메일은 필수입니다.")
-        @Email(message = "이메일 형식이 올바르지 않습니다.")
-        String userEmail,
+        @JsonProperty("user_id")
+        @NotBlank(message = "아이디는 필수입니다.")
+        @Pattern(regexp = "^[A-Za-z0-9]{4,20}$", message = "아이디는 영문·숫자 4~20자여야 합니다.")
+        String userId,
 
         @JsonProperty("user_pw")
         @NotBlank(message = "비밀번호는 필수입니다.")
         String userPw,
-
-        @NotBlank(message = "역할(role)은 필수입니다.")
-        String role,
 
         @NotBlank(message = "이름은 필수입니다.")
         String name,
 
         @JsonProperty("birth_date")
         @NotNull(message = "생년월일은 필수입니다.")
-        LocalDate birthDate
+        LocalDate birthDate,
+
+        @NotBlank(message = "전화번호는 필수입니다.")
+        @Pattern(regexp = "^[0-9]{10,11}$", message = "전화번호는 하이픈 없이 숫자만 입력해야 합니다.")
+        String phone
 ) {
 }

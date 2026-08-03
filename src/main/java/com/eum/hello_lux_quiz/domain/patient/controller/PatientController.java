@@ -38,7 +38,7 @@ public class PatientController {
     @PostMapping("/register")
     public ResponseEntity<PatientRegisterResponse> register(
             @Valid @RequestBody PatientRegisterRequest request) {
-        PatientRegisterResponse response = patientService.register(SecurityUtil.getCurrentEmail(), request);
+        PatientRegisterResponse response = patientService.register(SecurityUtil.getCurrentUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -53,7 +53,7 @@ public class PatientController {
     public ResponseEntity<MessageResponse> update(
             @PathVariable Integer pCode,
             @RequestBody PatientUpdateRequest request) {
-        patientService.update(SecurityUtil.getCurrentEmail(), pCode, request);
+        patientService.update(SecurityUtil.getCurrentUserId(), pCode, request);
         return ResponseEntity.ok(MessageResponse.of("수정 완료"));
     }
 
@@ -70,7 +70,7 @@ public class PatientController {
             @PathVariable Integer pCode,
             @RequestBody DailyStatusRequest request) {
         DailyStatusResponse response =
-                patientService.saveDailyStatus(SecurityUtil.getCurrentEmail(), pCode, request);
+                patientService.saveDailyStatus(SecurityUtil.getCurrentUserId(), pCode, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

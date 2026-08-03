@@ -95,7 +95,8 @@ import java.time.LocalDate;
                 return 0;
             }
             return Math.round(correctCount * 100f / totalCount);
-
+        }
+        
         @PrePersist
         public void prePersist() {
             if (this.date == null) {

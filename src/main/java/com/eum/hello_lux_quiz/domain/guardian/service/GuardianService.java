@@ -36,16 +36,17 @@ public class GuardianService {
      * 보호자-환자 연동. 환자 존재를 확인하고 중복 연동을 방지한다.
      */
     @Transactional
-    public LinkResponse link(String email, Integer pCode) {
-        patientService.validateExists(pCode);
+    public LinkResponse link(String userId, String patientCode) {
+        Integer pCode = patientService.resolvePCode(patientCode);
 
-        if (guardianRepository.existsByPCodeAndUserEmail(pCode, email)) {
+
+        if (guardianRepository.existsByPCodeAndUserId(pCode, userId)) {
             throw new CustomException(ErrorCode.ALREADY_LINKED);
         }
 
         guardianRepository.save(Guardian.builder()
                 .pCode(pCode)
-                .userEmail(email)
+                .userId(userId)
                 .build());
 
         return new LinkResponse("연동 완료", patientService.getPatientName(pCode));
@@ -55,7 +56,7 @@ public class GuardianService {
      * 연동된 환자 목록 조회. last_score 는 퀴즈 모듈 연동 시 채워진다.
      */
     public List<LinkedPatientResponse> getLinkedPatients(String email) {
-        return guardianRepository.findAllByUserEmail(email).stream()
+        return guardianRepository.findAllByUserId(email).stream()
                 .map(guardian -> {
                     Integer pCode = guardian.getPCode();
                     Integer lastScore = quizStatsPort.getLastScore(pCode);
@@ -95,7 +96,7 @@ public class GuardianService {
         validateLinked(email, pCode);
         StatusMemo memo = statusMemoRepository.save(StatusMemo.builder()
                 .pCode(pCode)
-                .userEmail(email)
+                .userId(email)
                 .recordDate(resolveRecordDate(request.recordDate()))
                 .healthStatus(request.healthStatus())
                 .sleepStatus(request.sleepStatus())
@@ -151,7 +152,7 @@ public class GuardianService {
         validateLinked(email, pCode);
         StatusMemo memo = statusMemoRepository.findById(memoId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMO_NOT_FOUND));
-        if (!memo.getPCode().equals(pCode) || !memo.getUserEmail().equals(email)) {
+        if (!memo.getPCode().equals(pCode) || !memo.getUserId().equals(email)) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
         return memo;
@@ -170,7 +171,7 @@ public class GuardianService {
 
     private void validateLinked(String email, Integer pCode) {
         patientService.validateExists(pCode);
-        if (!guardianRepository.existsByPCodeAndUserEmail(pCode, email)) {
+        if (!guardianRepository.existsByPCodeAndUserId(pCode, email)) {
             throw new CustomException(ErrorCode.LINK_NOT_FOUND);
         }
     }

@@ -1,25 +1,25 @@
 package com.eum.hello_lux_quiz.global.exception;
 
-import lombok.Builder;
 import lombok.Getter;
 
+/**
+ * 에러 응답. 모든 에러는 {"message":"..."} 형태로 통일한다.
+ * (HTTP 상태 코드는 응답 상태에 담기므로 본문에는 메시지만 포함한다.)
+ */
+
 @Getter
-@Builder
 public class ErrorResponse {
-    private final int status;
     private final String message;
 
-    public static ErrorResponse of(ErrorCode errorCode) {
-        return ErrorResponse.builder()
-                .status(errorCode.getStatus().value())
-                .message(errorCode.getMessage())
-                .build();
+    private ErrorResponse(String message) {
+        this.message = message;
     }
 
-    public static ErrorResponse of(int status, String message) {
-        return ErrorResponse.builder()
-                .status(status)
-                .message(message)
-                .build();
+    public static ErrorResponse of(ErrorCode errorCode) {
+        return new ErrorResponse(errorCode.getMessage());
+    }
+
+    public static ErrorResponse of(String message) {
+        return new ErrorResponse(message);
     }
 }

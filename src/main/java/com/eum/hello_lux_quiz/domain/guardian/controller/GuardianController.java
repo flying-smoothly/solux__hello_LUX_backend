@@ -37,19 +37,19 @@ public class GuardianController {
     /** 보호자-환자 연동 */
     @PostMapping("/link")
     public ResponseEntity<LinkResponse> link(@Valid @RequestBody LinkRequest request) {
-        return ResponseEntity.ok(guardianService.link(SecurityUtil.getCurrentEmail(), request.pCode()));
+        return ResponseEntity.ok(guardianService.link(SecurityUtil.getCurrentUserId(), request.patientCode()));
     }
 
     /** 연동된 환자 목록 조회 */
     @GetMapping("/patients")
     public ResponseEntity<List<LinkedPatientResponse>> getPatients() {
-        return ResponseEntity.ok(guardianService.getLinkedPatients(SecurityUtil.getCurrentEmail()));
+        return ResponseEntity.ok(guardianService.getLinkedPatients(SecurityUtil.getCurrentUserId()));
     }
 
     /** 환자 요약 대시보드 */
     @GetMapping("/{pCode}/dashboard")
     public ResponseEntity<DashboardResponse> getDashboard(@PathVariable Integer pCode) {
-        return ResponseEntity.ok(guardianService.getDashboard(SecurityUtil.getCurrentEmail(), pCode));
+        return ResponseEntity.ok(guardianService.getDashboard(SecurityUtil.getCurrentUserId(), pCode));
     }
 
     /** 환자 상태 기록(보호자 메모) 작성 — 건강/수면/식사/통증/기분/행동/연계여부/메모 */
@@ -58,14 +58,14 @@ public class GuardianController {
             @PathVariable Integer pCode,
             @Valid @RequestBody MemoRequest request) {
         MemoCreateResponse response =
-                guardianService.createMemo(SecurityUtil.getCurrentEmail(), pCode, request);
+                guardianService.createMemo(SecurityUtil.getCurrentUserId(), pCode, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     /** 상태 메모 목록 조회 */
     @GetMapping("/{pCode}/memo")
     public ResponseEntity<List<MemoResponse>> getMemos(@PathVariable Integer pCode) {
-        return ResponseEntity.ok(guardianService.getMemos(SecurityUtil.getCurrentEmail(), pCode));
+        return ResponseEntity.ok(guardianService.getMemos(SecurityUtil.getCurrentUserId(), pCode));
     }
 
     /** 상태 기록 수정 */
@@ -75,7 +75,7 @@ public class GuardianController {
             @PathVariable Long memoId,
             @Valid @RequestBody MemoRequest request) {
         return ResponseEntity.ok(
-                guardianService.updateMemo(SecurityUtil.getCurrentEmail(), pCode, memoId, request));
+                guardianService.updateMemo(SecurityUtil.getCurrentUserId(), pCode, memoId, request));
     }
 
     /** 상태 기록 삭제 */
@@ -83,7 +83,7 @@ public class GuardianController {
     public ResponseEntity<MessageResponse> deleteMemo(
             @PathVariable Integer pCode,
             @PathVariable Long memoId) {
-        guardianService.deleteMemo(SecurityUtil.getCurrentEmail(), pCode, memoId);
+        guardianService.deleteMemo(SecurityUtil.getCurrentUserId(), pCode, memoId);
         return ResponseEntity.ok(MessageResponse.of("삭제 완료"));
     }
 
@@ -92,6 +92,6 @@ public class GuardianController {
     public ResponseEntity<TrendResponse> getTrend(
             @PathVariable Integer pCode,
             @RequestParam(required = false, defaultValue = "week") String period) {
-        return ResponseEntity.ok(guardianService.getTrend(SecurityUtil.getCurrentEmail(), pCode, period));
+        return ResponseEntity.ok(guardianService.getTrend(SecurityUtil.getCurrentUserId(), pCode, period));
     }
 }

@@ -36,24 +36,51 @@ public class PatientService {
      */
     @Transactional
     public PatientRegisterResponse register(String email, PatientRegisterRequest request) {
-        if (!memberRepository.existsByEmail(email)) {
+        if (!memberRepository.existsByUserId(email)) {
             throw new CustomException(ErrorCode.MEMBER_NOT_FOUND);
         }
 
 
-        if (patientRepository.existsByUserEmail(email)) {
+        if (patientRepository.existsByUserId(email)) {
             throw new CustomException(ErrorCode.PATIENT_ALREADY_REGISTERED);
         }
 
         Patient patient = patientRepository.save(Patient.builder()
-                .userEmail(email)
+                .userId(email)
+                .patientCode(generatePatientCode())
                 .gender(request.gender())
                 .diagnosis(request.diagnosis())
                 .personality(request.personality())
                 .speechStyle(request.speechStyle())
                 .build());
 
-        return new PatientRegisterResponse(patient.getPCode(), "환자 등록 완료");
+        return new PatientRegisterResponse(patient.getPCode(), patient.getPatientCode(), "환자 등록 완료");
+    }
+
+    /** 보호자·의사 연동용 6자리 영문+숫자 코드를 중복되지 않게 발급한다(혼동되는 0/O/1/I 제외). */
+    private String generatePatientCode() {
+        final String alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        final java.security.SecureRandom random = new java.security.SecureRandom();
+        for (int attempt = 0; attempt < 20; attempt++) {
+            StringBuilder sb = new StringBuilder(6);
+            for (int i = 0; i < 6; i++) {
+                sb.append(alphabet.charAt(random.nextInt(alphabet.length())));
+            }
+            String code = sb.toString();
+            if (!patientRepository.existsByPatientCode(code)) {
+                return code;
+            }
+        }
+        throw new CustomException(ErrorCode.PATIENT_CODE_GENERATION_FAILED);
+    }
+
+    /**
+     * 연동용 코드(patient_code)로 내부 환자 코드(p_code)를 조회한다. 보호자·의사 연동에서 사용.
+     */
+    public Integer resolvePCode(String patientCode) {
+        return patientRepository.findByPatientCode(patientCode)
+                .orElseThrow(() -> new CustomException(ErrorCode.PATIENT_NOT_FOUND))
+                .getPCode();
     }
 
     /**
@@ -158,7 +185,7 @@ public class PatientService {
      */
     public String getPatientName(Integer pCode) {
         Patient patient = getPatient(pCode);
-        return memberRepository.findByEmail(patient.getUserEmail())
+        return memberRepository.findByUserId(patient.getUserId())
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND))
                 .getName();
     }
@@ -171,7 +198,7 @@ public class PatientService {
 
     private void validateOwner(String email, Integer pCode) {
         Patient patient = getPatient(pCode);
-        if (!patient.getUserEmail().equals(email)) { // 추후 의사,보호자 domain 업데이트 시 수정 예정
+        if (!patient.getUserId().equals(email)) { // 추후 의사,보호자 domain 업데이트 시 수정 예정
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
     }

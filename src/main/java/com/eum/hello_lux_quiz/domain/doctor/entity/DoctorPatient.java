@@ -14,12 +14,13 @@ import lombok.NoArgsConstructor;
 
 /**
  * 의사-환자 연동 엔티티.
- * 한 의사가 여러 환자를 담당할 수 있어 (p_code, user_email) 조합을 유일하게 관리한다.
- */
+ * 한 의사가 여러 환자를 담당할 수 있어 (p_code, user_id) 조합을 유일하게 관리한다.
+*/
+
 @Entity
 @Getter
 @Table(name = "doctor_patient",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"p_code", "user_email"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"p_code", "user_id"}))
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DoctorPatient {
 
@@ -31,12 +32,12 @@ public class DoctorPatient {
     @Column(name = "p_code", nullable = false)
     private Integer pCode;
 
-    @Column(name = "user_email", nullable = false, length = 100)
-    private String userEmail;
+    @Column(name = "user_id", nullable = false, length = 100)
+    private String userId;
 
     @Builder
-    public DoctorPatient(Integer pCode, String userEmail) {
+    public DoctorPatient(Integer pCode, String userId) {
         this.pCode = pCode;
-        this.userEmail = userEmail;
+        this.userId = userId;
     }
 }

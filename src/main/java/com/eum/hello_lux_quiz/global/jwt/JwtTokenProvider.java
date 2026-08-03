@@ -27,19 +27,24 @@ public class JwtTokenProvider {
     }
 
     /**
-     * 이메일과 역할을 담은 JWT 액세스 토큰을 생성한다.
+     * 아이디(user_id)와 역할을 담은 JWT 액세스 토큰을 생성한다.
+     * 역할 선택 전이면 role 이 null 일 수 있으며, 이 경우 role 클레임을 넣지 않는다.
      */
-    public String createToken(String email, String role) {
+    public String createToken(String userId, String role) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expiration);
 
-        return Jwts.builder()
-                .subject(email)
-                .claim("role", role)
+        var builder = Jwts.builder()
+                .subject(userId)
                 .issuedAt(now)
                 .expiration(expiry)
-                .signWith(key)
-                .compact();
+                .signWith(key);
+
+        if (role != null && !role.isBlank()) {
+            builder.claim("role", role);
+        }
+
+        return builder.compact();
     }
 
     public boolean validateToken(String token) {
@@ -51,7 +56,7 @@ public class JwtTokenProvider {
         }
     }
 
-    public String getEmail(String token) {
+    public String getUserId(String token) {
         return parse(token).getSubject();
     }
 
@@ -61,11 +66,12 @@ public class JwtTokenProvider {
 
     public Authentication getAuthentication(String token) {
         Claims claims = parse(token);
-        String email = claims.getSubject();
+        String userId = claims.getSubject();
         String role = claims.get("role", String.class);
-        List<SimpleGrantedAuthority> authorities =
-                List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
-        return new UsernamePasswordAuthenticationToken(email, null, authorities);
+        List<SimpleGrantedAuthority> authorities = (role != null && !role.isBlank())
+                ? List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))
+                : List.of();
+        return new UsernamePasswordAuthenticationToken(userId, null, authorities);
     }
 
     private Claims parse(String token) {
