@@ -1,6 +1,7 @@
 package com.eum.hello_lux_quiz.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
@@ -9,7 +10,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
@@ -29,10 +29,17 @@ public class QuizItemDto {
     private String quizComment;   // 퀴즈 문제/설명 텍스트
     private String quizPhoto;     // 사진 URL (사진 기반 퀴즈일 경우)
     private String answer;        // 정답
-    private List<String> options; // 💡 새로 추가: 객관식 보기 (Level 1 전용)
+    private List<String> options; // 객관식 보기 (Level 1 전용)
+    private List<String> hints;   // 퀴즈 힌트 목록 (hints)
+
+    @JsonProperty("set_id")
+    private Integer setId;
+
+    @JsonProperty("p_code")
+    private Integer pCode;
 
     // ========================================================
-    // 👇 IDE Lombok 인식 오류 및 타입 불일치 방지용 수동 Getter / Setter
+    //  IDE Lombok 인식 오류 및 타입 불일치 방지용 수동 Getter / Setter
     // ========================================================
     public Integer getQuizId() {
         return quizId;
@@ -94,7 +101,6 @@ public class QuizItemDto {
         this.answer = answer;
     }
 
-    // 💡 options 수동 Getter / Setter 추가
     public List<String> getOptions() {
         return options;
     }
@@ -103,14 +109,15 @@ public class QuizItemDto {
         this.options = options;
     }
 
-    // QuizItemDto.java 에 추가할 필드 및 수동 Getter/Setter (또는 Jackson 매핑)
-    @JsonProperty("set_id")
-    private Integer setId;
+    //  hints 수동 Getter / Setter 추가
+    public List<String> getHints() {
+        return hints;
+    }
 
-    @JsonProperty("p_code")
-    private Integer pCode;
+    public void setHints(List<String> hints) {
+        this.hints = hints;
+    }
 
-    // 필요 시 수동 Getter / Setter
     public Integer getSetId() {
         return setId;
     }
@@ -127,4 +134,3 @@ public class QuizItemDto {
         this.pCode = pCode;
     }
 }
-
