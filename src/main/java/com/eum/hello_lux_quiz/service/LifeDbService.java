@@ -18,6 +18,8 @@ import com.eum.hello_lux_quiz.dto.LifeDbResponseDto;
 import com.eum.hello_lux_quiz.dto.LifeDbUpdateRequestDto;
 import com.eum.hello_lux_quiz.repository.DetailRepository;
 import com.eum.hello_lux_quiz.repository.LifeDbRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -31,6 +33,7 @@ public class LifeDbService {
     private final LifeDbRepository lifeDbRepository;
     private final DetailRepository detailRepository;
     private final S3Client s3Client; // Cloudflare R2 연동용 S3 Client 주입
+    private final ObjectMapper objectMapper; //  JSON 변환용 ObjectMapper 추가
 
     @Value("${cloudflare.r2.bucket-name}")
     private String bucketName;
@@ -45,6 +48,9 @@ public class LifeDbService {
                 ? LocalDate.parse(request.getRecordDate())
                 : LocalDate.now();
 
+        //  List<FamilyDto> -> JSON 문자열 변환
+        String familyJson = convertFamilyToJson(request.getFamily());
+
         LifeDb lifeDb = new LifeDb(
                 pCode,
                 request.getTitle(),
@@ -53,7 +59,7 @@ public class LifeDbService {
                 request.getLike(),
                 request.getJob(),
                 request.getHometown(),
-                request.getFamily()
+                familyJson
         );
 
         LifeDb saved = lifeDbRepository.save(lifeDb);
@@ -105,12 +111,15 @@ public class LifeDbService {
         LifeDb lifeDb = lifeDbRepository.findById(request.getMemoryId())
                 .orElseThrow(() -> new IllegalArgumentException("해당 삶의 DB를 찾을 수 없습니다. id=" + request.getMemoryId()));
 
+        //  List<FamilyDto> -> JSON 문자열 변환
+        String familyJson = convertFamilyToJson(request.getFamily());
+
         lifeDb.updateInfo(
                 request.getPlace(),
                 request.getLike(),
                 request.getJob(),
                 request.getHometown(),
-                request.getFamily()
+                familyJson
         );
 
         return lifeDb.getMemoryId();
@@ -141,6 +150,21 @@ public class LifeDbService {
 
         } catch (IOException e) {
             throw new RuntimeException("Cloudflare R2 이미지 업로드 중 오류가 발생했습니다.", e);
+        }
+    }
+
+    //  Object/List 객체를 DB 저장용 JSON 문자열로 직렬화하는 헬퍼 메서드
+    private String convertFamilyToJson(Object familyObj) {
+        if (familyObj == null) {
+            return null;
+        }
+        if (familyObj instanceof String str) {
+            return str;
+        }
+        try {
+            return objectMapper.writeValueAsString(familyObj);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("가족 정보 JSON 변환 실패", e);
         }
     }
 }
