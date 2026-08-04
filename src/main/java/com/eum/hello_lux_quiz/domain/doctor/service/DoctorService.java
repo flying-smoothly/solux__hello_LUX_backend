@@ -36,7 +36,7 @@ public class DoctorService {
      * 의사-환자 연동.
      */
     @Transactional
-    public void link(String userId, String patientCode) {
+    public String link(String userId, String patientCode) {
         Integer pCode = patientService.resolvePCode(patientCode);
         if (doctorPatientRepository.existsByPCodeAndUserId(pCode, userId)) {
             throw new CustomException(ErrorCode.ALREADY_LINKED);

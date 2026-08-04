@@ -1,6 +1,7 @@
 package com.eum.hello_lux_quiz.domain.doctor.controller;
 
 import com.eum.hello_lux_quiz.domain.doctor.dto.DoctorLinkRequest;
+import com.eum.hello_lux_quiz.domain.doctor.dto.DoctorLinkResponse;
 import com.eum.hello_lux_quiz.domain.doctor.dto.DoctorPatientResponse;
 import com.eum.hello_lux_quiz.domain.doctor.dto.LevelRequest;
 import com.eum.hello_lux_quiz.domain.doctor.dto.ReportResponse;
@@ -30,14 +31,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DoctorController {
 
+    private final DoctorService doctorService;
     private final PatientStatusService patientStatusService;
 
     /** 의사-환자 연동 */
     @PostMapping("/link")
-    public ResponseEntity<MessageResponse> link(@Valid @RequestBody DoctorLinkRequest request) {
-        doctorService.link(SecurityUtil.getCurrentUserId(), request.patientCode());
-        return ResponseEntity.ok(MessageResponse.of("연동 완료"));
-    }
+    public ResponseEntity<DoctorLinkResponse> link(@Valid @RequestBody DoctorLinkRequest request) {
+        String patientName = doctorService.link(SecurityUtil.getCurrentUserId(), request.patientCode());
+        return ResponseEntity.ok(new DoctorLinkResponse("연동 완료", patientName));
+    }  
 
     /** 담당 환자 목록 조회 */
     @GetMapping("/patients")
