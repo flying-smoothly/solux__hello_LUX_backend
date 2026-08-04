@@ -62,7 +62,7 @@ public class Patient {
     private String patientStatus;
 
     @Builder
-    public Patient(String userEmail, String gender, String diagnosis,
+    public Patient(String userId, String patientCode, String gender, String diagnosis,
                    String personality, String speechStyle, String patientStatus) {
         this.userId = userId;
         this.patientCode = patientCode;
