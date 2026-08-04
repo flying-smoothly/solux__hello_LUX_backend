@@ -3,6 +3,9 @@ package com.eum.hello_lux_quiz.service;
 import com.eum.hello_lux_quiz.domain.*;
 import com.eum.hello_lux_quiz.dto.*;
 import com.eum.hello_lux_quiz.repository.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,6 +14,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -25,6 +29,7 @@ public class QuizService {
     private final DetailRepository detailRepository; // 세분화 Repository
     private final QuizGeneratorService quizGeneratorService;
     private final QuizScoringService quizScoringService;
+    private final ObjectMapper objectMapper; //  JSON 변환용 ObjectMapper 추가 주입
 
     public QuizService(QuizSetRepository quizSetRepository,
                        QuizItemRepository quizItemRepository,
@@ -34,7 +39,8 @@ public class QuizService {
                        LifeDbRepository lifeDbRepository,
                        DetailRepository detailRepository,
                        QuizGeneratorService quizGeneratorService,
-                       QuizScoringService quizScoringService) {
+                       QuizScoringService quizScoringService,
+                       ObjectMapper objectMapper) { //  주입 추가
         this.quizSetRepository = quizSetRepository;
         this.quizItemRepository = quizItemRepository;
         this.quizResultRepository = quizResultRepository;
@@ -44,6 +50,7 @@ public class QuizService {
         this.detailRepository = detailRepository;
         this.quizGeneratorService = quizGeneratorService;
         this.quizScoringService = quizScoringService;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -59,13 +66,16 @@ public class QuizService {
         contextBuilder.append("=== 환자 회상 정보 (삶의DB 및 세분화 사건) ===\n");
 
         for (LifeDb memory : lifeDbList) {
+            // JSON 형태의 family 문자열을 readable한 텍스트 형태("홍길동(50세, 아들)")로 파싱
+            String formattedFamily = formatFamilyInfo(memory.getFamily());
+
             contextBuilder.append(String.format("""
                 - 고향: %s / 직업: %s / 가족: %s
                 - 좋아하는 것: %s / 주요 장소: %s / 제목: %s
                 """,
                     memory.getHometown(),
                     memory.getJob(),
-                    memory.getFamily(),
+                    formattedFamily, // 💡 변환된 가독성 좋은 가족 정보 사용
                     memory.getLikes(),
                     memory.getPlace(),
                     memory.getTitle()
@@ -91,6 +101,28 @@ public class QuizService {
         }
 
         return contextBuilder.toString();
+    }
+
+    //  JSON [family] 텍스트를 읽기 편한 "이름(나이세, 호칭)" 문자열로 변환하는 헬퍼 메서드
+    private String formatFamilyInfo(String familyJson) {
+        if (familyJson == null || familyJson.isBlank()) {
+            return "없음";
+        }
+        try {
+            List<FamilyDto> familyList = objectMapper.readValue(familyJson, new TypeReference<List<FamilyDto>>() {});
+            if (familyList.isEmpty()) {
+                return "없음";
+            }
+            return familyList.stream()
+                    .map(f -> String.format("%s(%d세, %s)", 
+                            f.getName(), 
+                            f.getAge() != null ? f.getAge() : 0, 
+                            f.getRelation()))
+                    .collect(Collectors.joining(", "));
+        } catch (JsonProcessingException e) {
+            // JSON 변환에 실패한 경우 기존 단일 문자열로 전달
+            return familyJson;
+        }
     }
 
     /**
@@ -125,7 +157,7 @@ public class QuizService {
                 dto.setOptions(List.of(item.getOptions().split(",\\s*")));
             }
 
-            // 2. 💡 힌트 (hints) 매핑 추가
+            // 2. 힌트 (hints) 매핑 추가
             if (item.getHints() != null && !item.getHints().isBlank()) {
                 dto.setHints(List.of(item.getHints().split(",\\s*")));
             }
@@ -233,12 +265,10 @@ public class QuizService {
                     ? String.join(", ", dto.getOptions())
                     : null;
 
-            // 💡 [추가] 힌트 List -> Comma 구분자 String으로 변환
             String hintsString = (dto.getHints() != null && !dto.getHints().isEmpty())
                     ? String.join(", ", dto.getHints())
                     : null;
 
-            // QuizItem Entity 저장 (QuizItem 생성자 구현 방식에 맞추어 생성)
             QuizItem item = new QuizItem(
                     savedQuizSet.getSetId(),
                     pCode,
@@ -249,7 +279,7 @@ public class QuizService {
                     dto.getQuizPhoto(),
                     dto.getAnswer(),
                     optionsString,
-                    hintsString // 💡 hintsString 전달
+                    hintsString
             );
 
             quizItemRepository.save(item);
