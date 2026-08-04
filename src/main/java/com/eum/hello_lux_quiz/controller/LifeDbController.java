@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -72,5 +73,20 @@ public class LifeDbController {
                 "message", "삶의 DB 기본 정보가 성공적으로 수정되었습니다."
         );
         return ResponseEntity.ok(response);
+    }
+
+    // 5. 세분화 사건 이미지 등록 
+    @PostMapping("/{p_code}/images")
+    public ResponseEntity<?> uploadImage(
+            @PathVariable("p_code") Integer pCode,
+            @RequestParam("image") MultipartFile image) {
+
+        String photoUrl = lifeDbService.uploadImage(pCode, image);
+
+        Map<String, Object> response = Map.of(
+                "photo_url", photoUrl,
+                "message", "사진이 성공적으로 업로드되었습니다."
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }
