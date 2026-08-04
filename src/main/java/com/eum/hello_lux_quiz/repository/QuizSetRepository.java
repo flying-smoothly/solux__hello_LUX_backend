@@ -7,4 +7,6 @@ import com.eum.hello_lux_quiz.domain.QuizSet;
 
 @Repository
 public interface QuizSetRepository extends JpaRepository<QuizSet, Integer> {
+
+    int countByPCode(Integer pCode);
 }

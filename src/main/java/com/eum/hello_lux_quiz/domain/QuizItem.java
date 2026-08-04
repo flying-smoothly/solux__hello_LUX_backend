@@ -3,13 +3,14 @@ package com.eum.hello_lux_quiz.domain;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "퀴즈응시",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"set_id", "quiz_num"}))
+@Table(name = "퀴즈응시")
 public class QuizItem {
+
+    // DB의 quiz_num 컬럼이 PK이자 auto_increment입니다.
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "quiz_id")
-    private Integer quizId;
+    @Column(name = "quiz_num")
+    private Long quizNum;
 
     @Column(name = "set_id", nullable = false)
     private Integer setId;
@@ -17,11 +18,8 @@ public class QuizItem {
     @Column(name = "p_code", nullable = false)
     private Integer pCode;
 
-    @Column(name = "quiz_num", nullable = false)
-    private Integer quizNum;
-
-    @Column(name = "score")
-    private Integer score;
+    @Column(name = "score", nullable = false)
+    private Integer score = 0; // score NOT NULL 방지 기본값
 
     @Column(name = "quiz_category", nullable = false, length = 50)
     private String quizCategory;
@@ -39,25 +37,19 @@ public class QuizItem {
     private String answer;
 
     @Column(name = "options", columnDefinition = "TEXT")
-    private String options; // 객관식 보기 컬럼
+    private String options;
 
     @Column(name = "hints", columnDefinition = "TEXT")
-    private String hints; / 힌트 컬럼 추가 
+    private String hints;
 
     // JPA용 기본 생성자
     protected QuizItem() {
     }
 
-    // 기존 생성자 (호환용이 필요할 경우 남겨둠)
-    public QuizItem(Integer setId, Integer pCode, Integer quizNum, String quizCategory, Integer level, String quizComment, String quizPhoto, String answer, String options) {
-        this(setId, pCode, quizNum, quizCategory, level, quizComment, quizPhoto, answer, options, null);
-    }
-
-    // 힌트 포함 수동 생성자
-    public QuizItem(Integer setId, Integer pCode, Integer quizNum, String quizCategory, Integer level, String quizComment, String quizPhoto, String answer, String options, String hints) {
+    // 수동 생성자 (quizNum은 DB가 자동 생성하므로 제외)
+    public QuizItem(Integer setId, Integer pCode, String quizCategory, Integer level, String quizComment, String quizPhoto, String answer, String options, String hints) {
         this.setId = setId;
         this.pCode = pCode;
-        this.quizNum = quizNum;
         this.quizCategory = quizCategory;
         this.level = level;
         this.quizComment = quizComment;
@@ -65,11 +57,12 @@ public class QuizItem {
         this.answer = answer;
         this.options = options;
         this.hints = hints;
+        this.score = 0;
     }
 
-    // --- 수동 Getter ---
-    public Integer getQuizId() {
-        return quizId;
+    // --- Getter ---
+    public Long getQuizNum() {
+        return quizNum;
     }
 
     public Integer getSetId() {
@@ -78,14 +71,6 @@ public class QuizItem {
 
     public Integer getPCode() {
         return pCode;
-    }
-
-    public Integer getpCode() {
-        return pCode; // Lombok 네이밍 호환용
-    }
-
-    public Integer getQuizNum() {
-        return quizNum;
     }
 
     public Integer getScore() {

@@ -32,15 +32,15 @@ public class QuizService {
     private final ObjectMapper objectMapper; // JSON 변환용 ObjectMapper
 
     public QuizService(QuizSetRepository quizSetRepository,
-                       QuizItemRepository quizItemRepository,
-                       QuizResultRepository quizResultRepository,
-                       QuizFeedbackRepository quizFeedbackRepository,
-                       PatientProfileRepository patientProfileRepository,
-                       LifeDbRepository lifeDbRepository,
-                       DetailRepository detailRepository,
-                       QuizGeneratorService quizGeneratorService,
-                       QuizScoringService quizScoringService,
-                       ObjectMapper objectMapper) {
+            QuizItemRepository quizItemRepository,
+            QuizResultRepository quizResultRepository,
+            QuizFeedbackRepository quizFeedbackRepository,
+            PatientProfileRepository patientProfileRepository,
+            LifeDbRepository lifeDbRepository,
+            DetailRepository detailRepository,
+            QuizGeneratorService quizGeneratorService,
+            QuizScoringService quizScoringService,
+            ObjectMapper objectMapper) {
         this.quizSetRepository = quizSetRepository;
         this.quizItemRepository = quizItemRepository;
         this.quizResultRepository = quizResultRepository;
@@ -107,15 +107,13 @@ public class QuizService {
             return "없음";
         }
         try {
-            List<FamilyDto> familyList = objectMapper.readValue(familyJson, new TypeReference<List<FamilyDto>>() {});
+            List<FamilyDto> familyList = objectMapper.readValue(familyJson, new TypeReference<List<FamilyDto>>() {
+            });
             if (familyList.isEmpty()) {
                 return "없음";
             }
             return familyList.stream()
-                    .map(f -> String.format("%s(%d세, %s)", 
-                            f.getName(), 
-                            f.getAge() != null ? f.getAge() : 0, 
-                            f.getRelation()))
+                    .map(f -> String.format("%s (%s)", f.getName(), f.getRelation()))
                     .collect(Collectors.joining(", "));
         } catch (JsonProcessingException e) {
             return familyJson;
@@ -260,7 +258,6 @@ public class QuizService {
             QuizItem item = new QuizItem(
                     savedQuizSet.getSetId(),
                     pCode,
-                    quizNumCounter++,
                     category,
                     dto.getLevel(),
                     dto.getQuizComment(),
@@ -277,7 +274,7 @@ public class QuizService {
     }
 
     public QuizResultResponse getQuizResultByDate(Integer pCode, LocalDate date) {
-        QuizResult quizResult = quizResultRepository.findByPCodeAndDate(pCode, date)
+        QuizResult quizResult = quizResultRepository.findByPCodeAndResultDate(pCode, date)
                 .orElseThrow(() -> new IllegalArgumentException("해당 날짜의 퀴즈 결과를 찾을 수 없습니다. (pCode: " + pCode + ", date: " + date + ")"));
 
         return QuizResultResponse.from(quizResult, 0);
@@ -302,7 +299,7 @@ public class QuizService {
         List<QuizResult> results;
 
         if (from != null && to != null) {
-            results = quizResultRepository.findByPCodeAndDateBetween(pCode, from, to);
+            results = quizResultRepository.findByPCodeAndResultDateBetween(pCode, from, to);
         } else {
             results = quizResultRepository.findByPCode(pCode);
         }

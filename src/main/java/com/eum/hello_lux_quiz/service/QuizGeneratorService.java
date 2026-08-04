@@ -49,29 +49,28 @@ public class QuizGeneratorService {
         // 1. prompt.txt 파일 불러오기
         String promptTemplate = loadPromptTemplate();
 
-        // 2. 환자 기본 정보 추출 (Null Safe)
-        String patientNameStr = (profile.getPatientName() != null) ? profile.getPatientName() : 
-                               (profile.getName() != null ? profile.getName() : "어르신");
-        String personalityStr = profile.getPersonality() != null ? profile.getPersonality() : "다정한";
-        String styleStr = profile.getStyle() != null ? profile.getStyle() : "친근한 말투";
-        String lifeDbStr = lifeDbContext != null ? lifeDbContext : "";
-        String timeInstructionStr = timeOrientationInstruction != null ? timeOrientationInstruction : "";
+        // 2. 환자 기본 정보 추출 (PatientProfile에 없는 필드는 기본값 적용)
+        String patientNameStr = "어르신"; // PatientProfile에 별도 이름 필드가 없으므로 기본 호칭 지정
+        String personalityStr = (profile != null && profile.getPersonality() != null) ? profile.getPersonality() : "다정한";
+        String styleStr = "친근한 말투";
+        String lifeDbStr = (lifeDbContext != null) ? lifeDbContext : "";
+        String timeInstructionStr = (timeOrientationInstruction != null) ? timeOrientationInstruction : "";
 
-        // 3. 음성/개인화 설정값 추출 (VoiceSetting 연관/임베디드 객체 유무 고려)
-        VoiceSetting voice = profile.getVoiceSetting();
+        // 3. 음성/개인화 설정값 추출 (VoiceSetting 객체 사용)
+        VoiceSetting voice = (profile != null) ? profile.getVoiceSetting() : null;
 
         String sentenceLengthStr = (voice != null && voice.getSentenceLength() != null) ? voice.getSentenceLength() : "보통";
-        
-        Boolean isHonorific = (voice != null) ? voice.getIsHonorific() : profile.getIsHonorific();
+
+        Boolean isHonorific = (voice != null) ? voice.getIsHonorific() : true;
         String isHonorificStr = Boolean.TRUE.equals(isHonorific) ? "존댓말 사용" : "편안한 어투";
 
-        Boolean isRepeatGuide = (voice != null) ? voice.getIsRepeatGuide() : profile.getIsRepeatGuide();
+        Boolean isRepeatGuide = (voice != null) ? voice.getIsRepeatGuide() : true;
         String isRepeatGuideStr = Boolean.TRUE.equals(isRepeatGuide) ? "적용" : "미적용";
 
-        Boolean isLowPressure = (voice != null) ? voice.getIsLowPressure() : profile.getIsLowPressure();
+        Boolean isLowPressure = (voice != null) ? voice.getIsLowPressure() : true;
         String isLowPressureStr = Boolean.TRUE.equals(isLowPressure) ? "적용" : "미적용";
 
-        Boolean isPositiveFeedback = (voice != null) ? voice.getIsPositiveFeedback() : profile.getIsPositiveFeedback();
+        Boolean isPositiveFeedback = (voice != null) ? voice.getIsPositiveFeedback() : true;
         String isPositiveFeedbackStr = Boolean.TRUE.equals(isPositiveFeedback) ? "적용" : "미적용";
 
         // 4. 플레이스홀더 치환
@@ -97,7 +96,8 @@ public class QuizGeneratorService {
         // 6. JSON 응답 파싱 및 정리 (Markdown 백틱 제거)
         try {
             String cleanedJson = jsonResponse.replaceAll("```json", "").replaceAll("```", "").trim();
-            return objectMapper.readValue(cleanedJson, new TypeReference<List<GeneratedQuizItemDto>>() {});
+            return objectMapper.readValue(cleanedJson, new TypeReference<List<GeneratedQuizItemDto>>() {
+            });
         } catch (Exception e) {
             throw new RuntimeException("AI 퀴즈 생성 응답 파싱 실패: " + e.getMessage(), e);
         }

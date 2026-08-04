@@ -14,19 +14,32 @@ public class PatientService {
 
     private final PatientProfileRepository patientProfileRepository;
 
-    // 수동 생성자 주입
     public PatientService(PatientProfileRepository patientProfileRepository) {
         this.patientProfileRepository = patientProfileRepository;
     }
 
     /**
-     * 의사가 환자의 인지 상태, 인지 지원 수준, 보호자 동행 여부를 변경하는 기능
+     * 의사 환자 난이도/상태 변경 (DoctorController 전용 - String 수신)
+     */
+    @Transactional
+    public void updatePatientStatus(Integer pCode, String newStatus) {
+        if (newStatus == null || newStatus.isBlank()) {
+            throw new IllegalArgumentException("환자 상태 값이 올바르지 않습니다.");
+        }
+
+        PatientProfile profile = patientProfileRepository.findByPCode(pCode)
+                .orElseThrow(() -> new IllegalArgumentException("해당 환자의 프로필을 찾을 수 없습니다. pCode=" + pCode));
+
+        profile.updatePatientStatus(newStatus);
+    }
+
+    /**
+     * 의사가 환자의 인지 상태, 인지 지원 수준, 보호자 동행 여부를 변경하는 기능 (DTO 수신)
      */
     @Transactional
     public void updatePatientStatus(Integer pCode, PatientStatusUpdateRequest requestDto) {
         String newStatus = requestDto.getPatientStatus();
 
-        // 입력값 검증 (유지, 주의, 위험 외 예외 처리)
         if (!"유지".equals(newStatus) && !"주의".equals(newStatus) && !"위험".equals(newStatus)) {
             throw new IllegalArgumentException("올바르지 않은 환자 상태 값입니다. (유지/주의/위험 중 선택)");
         }
@@ -34,18 +47,14 @@ public class PatientService {
         PatientProfile profile = patientProfileRepository.findByPCode(pCode)
                 .orElseThrow(() -> new IllegalArgumentException("해당 환자의 프로필을 찾을 수 없습니다. pCode=" + pCode));
 
-        // 1. 프로필 엔티티의 환자 상태 변경
         profile.updatePatientStatus(newStatus);
 
-        // 2. 화면 신규 입력 필드 변경 (인지 지원 수준 / 보호자 동행 여부)
         if (requestDto.getCognitiveLevel() != null) {
             profile.setCognitiveLevel(requestDto.getCognitiveLevel());
         }
         if (requestDto.getIsGuardianPresent() != null) {
             profile.setIsGuardianPresent(requestDto.getIsGuardianPresent());
         }
-        
-        // JPA 더티 체킹에 의해 자동으로 DB에 UPDATE 쿼리가 실행됩니다.
     }
 
     /**
@@ -62,7 +71,6 @@ public class PatientService {
             profile.setVoiceSetting(currentSetting);
         }
 
-        // VoiceSetting 내부 값 갱신 (JPA 더티 체킹으로 자동 DB UPDATE)
         currentSetting.updateSetting(
                 requestDto.getTtsSpeed(),
                 requestDto.getSentenceLength(),

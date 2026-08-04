@@ -1,6 +1,5 @@
 package com.eum.hello_lux_quiz.service;
 
-import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -22,9 +21,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+//  [R2 미사용] AWS SDK 임포트 주석 처리
+// import software.amazon.awssdk.core.sync.RequestBody;
+// import software.amazon.awssdk.services.s3.S3Client;
+// import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Service
 @RequiredArgsConstructor
@@ -32,15 +32,15 @@ public class LifeDbService {
 
     private final LifeDbRepository lifeDbRepository;
     private final DetailRepository detailRepository;
-    private final S3Client s3Client; // Cloudflare R2 연동용 S3 Client 주입
-    private final ObjectMapper objectMapper; //  JSON 변환용 ObjectMapper 추가
+    //  [R2 미사용] S3Client 필드 주석 처리
+    // private final S3Client s3Client; 
+    private final ObjectMapper objectMapper;
 
-    @Value("${cloudflare.r2.bucket-name}")
-    private String bucketName;
-
-    @Value("${cloudflare.r2.public-url}")
-    private String publicUrl;
-
+    // [R2 미사용] R2 환경 변수 임시 비활성화 (필요 시 더미값 설정)
+    // @Value("${cloudflare.r2.bucket-name}")
+    // private String bucketName;
+    // @Value("${cloudflare.r2.public-url}")
+    // private String publicUrl;
     // 1. 삶의 DB 최초 등록
     @Transactional
     public Integer saveLifeDb(Integer pCode, LifeDbRequestDto request) {
@@ -48,7 +48,6 @@ public class LifeDbService {
                 ? LocalDate.parse(request.getRecordDate())
                 : LocalDate.now();
 
-        //  List<FamilyDto> -> JSON 문자열 변환
         String familyJson = convertFamilyToJson(request.getFamily());
 
         LifeDb lifeDb = new LifeDb(
@@ -111,7 +110,6 @@ public class LifeDbService {
         LifeDb lifeDb = lifeDbRepository.findById(request.getMemoryId())
                 .orElseThrow(() -> new IllegalArgumentException("해당 삶의 DB를 찾을 수 없습니다. id=" + request.getMemoryId()));
 
-        //  List<FamilyDto> -> JSON 문자열 변환
         String familyJson = convertFamilyToJson(request.getFamily());
 
         lifeDb.updateInfo(
@@ -125,16 +123,18 @@ public class LifeDbService {
         return lifeDb.getMemoryId();
     }
 
-    // 5. 세분화 사건 이미지 업로드 (Cloudflare R2 적용)
+    // 5. 세분화 사건 이미지 업로드 (Cloudflare R2 적용 -> 임시 더미 URL 리턴 처리)
     @Transactional
     public String uploadImage(Integer pCode, MultipartFile image) {
         if (image == null || image.isEmpty()) {
             throw new IllegalArgumentException("업로드할 이미지 파일이 존재하지 않습니다.");
         }
 
-        // 파일명 중복 방지를 위한 UUID 적용 (경로: patients/{pCode}/UUID_originalName)
+        // R2 연동 전까지 테스트용 더미 이미지 URL 반환
         String fileName = "patients/" + pCode + "/" + UUID.randomUUID() + "_" + image.getOriginalFilename();
+        return "https://dummy-image-url.com/" + fileName;
 
+        /* [R2 세팅 완료 후 주석 해제하여 사용]
         try {
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(bucketName)
@@ -142,18 +142,16 @@ public class LifeDbService {
                     .contentType(image.getContentType())
                     .build();
 
-            // Cloudflare R2에 업로드 실행
             s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(image.getInputStream(), image.getSize()));
-
-            // 업로드 완료 후 이미지에 접근할 수 있는 URL 리턴
             return publicUrl + "/" + fileName;
 
         } catch (IOException e) {
             throw new RuntimeException("Cloudflare R2 이미지 업로드 중 오류가 발생했습니다.", e);
         }
+         */
     }
 
-    //  Object/List 객체를 DB 저장용 JSON 문자열로 직렬화하는 헬퍼 메서드
+    // Helper 메서드
     private String convertFamilyToJson(Object familyObj) {
         if (familyObj == null) {
             return null;

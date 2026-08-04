@@ -37,7 +37,7 @@ public class OpenAiClient {
         ChatCompletionRequest request = ChatCompletionRequest.builder()
                 .model(modelName)
                 .temperature(0.7)
-                .responseFormat(Map.of("type", "json_object")) // JSON 전용 응답 강제 (dto 지원 시 적용)
+                /*  .responseFormat(Map.of("type", "json_object")) // JSON 전용 응답 강제 (dto 지원 시 적용) */
                 .messages(List.of(
                         new ChatCompletionRequest.ChatMessage("system", systemPrompt),
                         new ChatCompletionRequest.ChatMessage("user", userPrompt)
@@ -62,11 +62,11 @@ public class OpenAiClient {
 
     // 기본 모델명을 안정적인 모델명으로 지정 (예: gemini-3.6-flash)
     public String generateQuizJson(String systemPrompt, String userPrompt) {
-        return generateQuizJson(systemPrompt, userPrompt, "gemini-1.5-flash");
+        return generateQuizJson(systemPrompt, userPrompt, "gemini-3.6-flash");
     }
 
     public String callSimpleGpt(String promptText) {
         String systemPrompt = "너는 친절하고 따뜻한 회상 치료 보조 AI이다. 주어진 조건에 맞게 딱 1문장의 힌트만 생성해라.";
-        return generateQuizJson(systemPrompt, promptText, "gemini-1.5-flash");
+        return generateQuizJson(systemPrompt, promptText, "gemini-3.6-flash");
     }
 }

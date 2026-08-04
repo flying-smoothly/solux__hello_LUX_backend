@@ -5,12 +5,17 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import static org.mockito.BDDMockito.given;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.eum.hello_lux_quiz.domain.DetailEvent;
 import com.eum.hello_lux_quiz.domain.LifeDb;
@@ -38,14 +43,15 @@ class QuizServiceTest {
     @Autowired
     private QuizScoringService quizScoringService;
 
-    @Autowired
+    // 💡 DB에서 직접 조회하는 대신 MockitoBean으로 가로챕니다.
+    @MockitoBean
+    private PatientProfileRepository patientProfileRepository;
+
+    @MockitoBean
     private LifeDbRepository lifeDbRepository;
 
-    @Autowired
-    private DetailRepository detailRepository; // 세분화 Repository 주입
-
-    @Autowired
-    private PatientProfileRepository patientProfileRepository;
+    @MockitoBean
+    private DetailRepository detailRepository;
 
     @Autowired
     private QuizSetRepository quizSetRepository;
@@ -55,6 +61,36 @@ class QuizServiceTest {
 
     @Autowired
     private QuizResultRepository quizResultRepository;
+
+    @BeforeEach
+    void setUpMockData() {
+        Integer targetPCode = 1;
+
+        // 1. PatientProfile Mocking (가짜 프로필 리턴)
+        PatientProfile mockProfile = Mockito.mock(PatientProfile.class);
+        given(mockProfile.getPatientStatus()).willReturn("유지");
+        given(patientProfileRepository.findByPCode(targetPCode)).willReturn(Optional.of(mockProfile));
+
+        // 2. LifeDb Mocking (가짜 LifeDb 리턴)
+        LifeDb mockLifeDb = Mockito.mock(LifeDb.class);
+        given(mockLifeDb.getMemoryId()).willReturn(100);
+        given(mockLifeDb.getHometown()).willReturn("서울");
+        given(mockLifeDb.getJob()).willReturn("선생님");
+        given(mockLifeDb.getFamily()).willReturn("아내, 아들");
+        given(mockLifeDb.getLikes()).willReturn("산책, 화초 가꾸기");
+        given(mockLifeDb.getPlace()).willReturn("남산공원");
+        given(mockLifeDb.getTitle()).willReturn("즐거운 나의 집");
+
+        given(lifeDbRepository.findByPCode(targetPCode)).willReturn(List.of(mockLifeDb));
+
+        // 3. DetailEvent Mocking (가짜 세부 사건 리턴)
+        DetailEvent mockDetail = Mockito.mock(DetailEvent.class);
+        given(mockDetail.getEvent()).willReturn("봄날 남산공원 소풍");
+        given(mockDetail.getPhotoUrl()).willReturn("https://example.com/photo.jpg");
+        given(mockDetail.getCategory()).willReturn("행복");
+
+        given(detailRepository.findByMemoryId(100)).willReturn(List.of(mockDetail));
+    }
 
     @Test
     @DisplayName("퀴즈 생성 -> 임의 답안 채점 -> DB 저장 및 결과 출력 전체 테스트")
@@ -70,7 +106,7 @@ class QuizServiceTest {
             throw new IllegalArgumentException("p_code=" + targetPCode + " 의 삶의DB 데이터가 없습니다.");
         }
 
-        //  Context 조립 (삶의DB + 세분화 사건 랜덤 3개)
+        // Context 조립 (삶의DB + 세분화 사건 랜덤 3개)
         StringBuilder contextBuilder = new StringBuilder();
         contextBuilder.append("=== 환자 회상 정보 (삶의DB 및 세분화 사건) ===\n");
         for (LifeDb memory : lifeDbList) {
@@ -111,7 +147,7 @@ class QuizServiceTest {
         System.out.println("⏳ Rate Limit 방지를 위해 3초간 대기합니다...");
         Thread.sleep(3000);
 
-        // 2. when (Step 1): AI 퀴즈 생성 (4개 인자)
+        // 2. when (Step 1): AI 퀴즈 생성
         List<GeneratedQuizItemDto> generatedDtos = quizGeneratorService.generateQuizSet(patientStatus, profile, lifeDbContext, "");
 
         // (1) 퀴즈 세트 DB 저장
@@ -140,19 +176,16 @@ class QuizServiceTest {
                     ? String.join(", ", dto.getHints())
                     : null;
 
-            // QuizItem Entity 생성 및 DB 저장
-            // (QuizItem Entity 생성자 파라미터 순서에 hintsString이 들어가는지 점검 필요)
             QuizItem quizItem = new QuizItem(
                     savedQuizSet.getSetId(),
                     targetPCode,
-                    0,
                     dto.getQuizCategory() != null ? dto.getQuizCategory() : "text",
                     dto.getLevel(),
                     dto.getQuizComment(),
                     dto.getQuizPhoto(),
                     dto.getAnswer(),
-                    optionsString
-                    // hintsString  <-- QuizItem Entity에 hints 필드가 정의되어 있다면 여기에 추가!
+                    optionsString,
+                    hintsString
             );
             quizItemRepository.save(quizItem);
 

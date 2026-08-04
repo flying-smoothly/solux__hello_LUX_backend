@@ -33,4 +33,8 @@ public class PatientProfile {
 
     @Column(name = "personality")
     private String personality; // 성격/특성 (화면 입력칸은 없지만 유지)
+
+    public void updatePatientStatus(String patientStatus) {
+        this.patientStatus = patientStatus;
+    }
 }

@@ -29,7 +29,7 @@ public class QuizResultResponse {
 
     public static QuizResultResponse from(QuizResult entity, Integer totalScore) {
         return QuizResultResponse.builder()
-                .date(entity.getDate())
+                .date(entity.getResultDate())
                 .totalCount(entity.getTotalCount())
                 .correctCount(entity.getCorrectCount())
                 .hint(entity.getHint())
