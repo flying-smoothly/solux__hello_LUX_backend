@@ -1,6 +1,7 @@
 package com.eum.hello_lux_quiz.service;
 
 import com.eum.hello_lux_quiz.domain.PatientProfile;
+import com.eum.hello_lux_quiz.domain.VoiceSetting;
 import com.eum.hello_lux_quiz.dto.GeneratedQuizItemDto;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,7 +18,6 @@ public class QuizGeneratorService {
     private final OpenAiClient openAiClient;
     private final ObjectMapper objectMapper;
 
-    // 수동 생성자 주입
     public QuizGeneratorService(OpenAiClient openAiClient, ObjectMapper objectMapper) {
         this.openAiClient = openAiClient;
         this.objectMapper = objectMapper;
@@ -49,21 +49,32 @@ public class QuizGeneratorService {
         // 1. prompt.txt 파일 불러오기
         String promptTemplate = loadPromptTemplate();
 
-        // Null 및 기본값 처리
-        String patientNameStr = profile.getName() != null ? profile.getName() : "";
-        String personalityStr = profile.getPersonality() != null ? profile.getPersonality() : "";
-        String styleStr = profile.getStyle() != null ? profile.getStyle() : "";
+        // 2. 환자 기본 정보 추출 (Null Safe)
+        String patientNameStr = (profile.getPatientName() != null) ? profile.getPatientName() : 
+                               (profile.getName() != null ? profile.getName() : "어르신");
+        String personalityStr = profile.getPersonality() != null ? profile.getPersonality() : "다정한";
+        String styleStr = profile.getStyle() != null ? profile.getStyle() : "친근한 말투";
         String lifeDbStr = lifeDbContext != null ? lifeDbContext : "";
         String timeInstructionStr = timeOrientationInstruction != null ? timeOrientationInstruction : "";
 
-        // 2. 새로 추가된 개인화 설정값 읽기 및 가공
-        String sentenceLengthStr = profile.getSentenceLength() != null ? profile.getSentenceLength() : "보통";
-        String isHonorificStr = (profile.getIsHonorific() != null && profile.getIsHonorific()) ? "존댓말 사용" : "편안한 어투";
-        String isRepeatGuideStr = (profile.getIsRepeatGuide() != null && profile.getIsRepeatGuide()) ? "적용" : "미적용";
-        String isLowPressureStr = (profile.getIsLowPressure() != null && profile.getIsLowPressure()) ? "적용" : "미적용";
-        String isPositiveFeedbackStr = (profile.getIsPositiveFeedback() != null && profile.getIsPositiveFeedback()) ? "적용" : "미적용";
+        // 3. 음성/개인화 설정값 추출 (VoiceSetting 연관/임베디드 객체 유무 고려)
+        VoiceSetting voice = profile.getVoiceSetting();
 
-        // 3. 플레이스홀더 치환 (개인화 설정 항목 추가)
+        String sentenceLengthStr = (voice != null && voice.getSentenceLength() != null) ? voice.getSentenceLength() : "보통";
+        
+        Boolean isHonorific = (voice != null) ? voice.getIsHonorific() : profile.getIsHonorific();
+        String isHonorificStr = Boolean.TRUE.equals(isHonorific) ? "존댓말 사용" : "편안한 어투";
+
+        Boolean isRepeatGuide = (voice != null) ? voice.getIsRepeatGuide() : profile.getIsRepeatGuide();
+        String isRepeatGuideStr = Boolean.TRUE.equals(isRepeatGuide) ? "적용" : "미적용";
+
+        Boolean isLowPressure = (voice != null) ? voice.getIsLowPressure() : profile.getIsLowPressure();
+        String isLowPressureStr = Boolean.TRUE.equals(isLowPressure) ? "적용" : "미적용";
+
+        Boolean isPositiveFeedback = (voice != null) ? voice.getIsPositiveFeedback() : profile.getIsPositiveFeedback();
+        String isPositiveFeedbackStr = Boolean.TRUE.equals(isPositiveFeedback) ? "적용" : "미적용";
+
+        // 4. 플레이스홀더 치환
         String finalPrompt = promptTemplate
                 .replace("{patient_status}", patientStatus)
                 .replace("{patient_name}", patientNameStr)
@@ -77,17 +88,16 @@ public class QuizGeneratorService {
                 .replace("{life_db_context}", lifeDbStr)
                 .replace("{time_orientation_instruction}", timeInstructionStr);
 
-        // System 역할과 User 요청을 하나로 전달하거나 분리하여 전달
+        // System 역할 설정
         String systemRole = "당신은 치매 환자를 위한 맞춤형 퀴즈를 출제하는 AI 보조관입니다. 응답은 오직 지정된 JSON 배열로만 출력하세요.";
 
-        // 4. OpenAiClient 호출
+        // 5. OpenAiClient 호출
         String jsonResponse = openAiClient.generateQuizJson(systemRole, finalPrompt);
 
-        // 5. JSON 응답 파싱
+        // 6. JSON 응답 파싱 및 정리 (Markdown 백틱 제거)
         try {
             String cleanedJson = jsonResponse.replaceAll("```json", "").replaceAll("```", "").trim();
-            return objectMapper.readValue(cleanedJson, new TypeReference<List<GeneratedQuizItemDto>>() {
-            });
+            return objectMapper.readValue(cleanedJson, new TypeReference<List<GeneratedQuizItemDto>>() {});
         } catch (Exception e) {
             throw new RuntimeException("AI 퀴즈 생성 응답 파싱 실패: " + e.getMessage(), e);
         }
