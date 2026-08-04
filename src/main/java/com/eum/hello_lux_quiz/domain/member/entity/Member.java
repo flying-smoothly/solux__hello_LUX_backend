@@ -42,7 +42,7 @@ public class Member {
     @Column(name = "birth_date", nullable = false)
     private LocalDate birthDate;
 
-    @Column(name = "phone", nullable = false, length = 20)
+    @Column(name = "phone", length = 20) // 선택입력으로 변경
     private String phone;
 
     @Column(name = "join_date", nullable = false)

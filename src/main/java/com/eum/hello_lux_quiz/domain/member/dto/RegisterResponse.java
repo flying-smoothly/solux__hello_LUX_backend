@@ -5,18 +5,19 @@ import com.eum.hello_lux_quiz.domain.member.entity.Member;
 
 /**
  * 회원가입 성공 응답.
- * 예: {"user_id":"hong1234","name":"홍길동"}
  *  */
 public record RegisterResponse(
+        String token,
         @JsonProperty("user_id") String userId,
         String role,
         String name
 ) {
-    public static RegisterResponse from(Member member) {
+    public static RegisterResponse of(Member member, String token) {
         return new RegisterResponse(
-                member.getUserId(),
-                member.getRole() != null ? member.getRole().name() : null,
-                member.getName()
-        );
+            token,
+            member.getUserId(),
+            member.getRole() != null ? member.getRole().name() : null,
+            member.getName()
+    );
     }
 }

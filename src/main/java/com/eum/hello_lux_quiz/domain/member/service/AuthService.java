@@ -44,11 +44,12 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.userPw()))
                 .role(null) // 가입 시점엔 역할 미설정, 이후 updateRole 로 지정
                 .name(request.name())
-                .phone(request.phone())
+                .birthDate(request.birthDate())
                 .build();
 
         memberRepository.save(member);
-        return RegisterResponse.from(member);
+        String token = jwtTokenProvider.createToken(member.getUserId(), null);
+        return RegisterResponse.of(member, token);
     }
 
     /**
