@@ -16,7 +16,7 @@ public class LifeDbRequestDto {
     @JsonProperty("record_date")
     private String recordDate;
 
-    // 💡 기존 String family -> List<FamilyDto> family로 변경
+    //  List<FamilyDto> family로 변경
     private List<FamilyDto> family;
     
     private String hometown;
