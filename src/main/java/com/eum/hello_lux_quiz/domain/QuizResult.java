@@ -34,6 +34,25 @@ import java.time.LocalDate;
         @Column(name = "trend_calc", columnDefinition = "TEXT", nullable = false)
         private String caculate;      // 변화_계산
 
+        @Column(name = "success_rate")
+        private Integer successRate;      // 정답률(%) - 확장 필드
+
+        @Column(name = "hint_used")
+        private Boolean hintUsed;         // 힌트 사용 여부 - 확장 필드
+
+        @Column(name = "avg_response_time")
+        private Integer avgResponseTime;  // 평균 응답 시간(초) - 확장 필드
+
+        @Column(name = "health_status")
+        private String healthStatus;      // 건강 상태 - 확장 필드
+
+        @Column(name = "sleep_status")
+        private String sleepStatus;       // 수면 상태 - 확장 필드
+
+        @Column(name = "emotion_status")
+        private String emotionStatus;     // 감정 상태 - 확장 필드
+
+
         protected QuizResult() {
         }
 
@@ -55,7 +74,7 @@ import java.time.LocalDate;
                           Integer avgResponseTime, String healthStatus, String sleepStatus, String emotionStatus) {
             this.setId = setId;
             this.pCode = pCode;
-            this.date = date;
+            this.date = date;   
             this.totalCount = totalCount;
             this.correctCount = correctCount;
             this.hint = hint;
@@ -113,6 +132,30 @@ import java.time.LocalDate;
 
         public String getCaculate() {
             return caculate;
+        }
+
+        public Integer getSuccessRate() {
+            return successRate;
+        }
+
+        public Boolean getHintUsed() {
+            return hintUsed;
+        }
+
+        public Integer getAvgResponseTime() {
+            return avgResponseTime;
+        }
+
+        public String getHealthStatus() {
+            return healthStatus;
+        }
+
+        public String getSleepStatus() {
+            return sleepStatus;
+        }
+
+        public String getEmotionStatus() {
+            return emotionStatus;
         }
     }
 

@@ -6,8 +6,11 @@ import com.eum.hello_lux_quiz.domain.doctor.dto.LevelRequest;
 import com.eum.hello_lux_quiz.domain.doctor.dto.ReportResponse;
 import com.eum.hello_lux_quiz.domain.doctor.dto.ReportUpdateRequest;
 import com.eum.hello_lux_quiz.domain.doctor.service.DoctorService;
+import com.eum.hello_lux_quiz.dto.DoctorLevelUpdateRequest;
+import com.eum.hello_lux_quiz.dto.DoctorLevelUpdateResponse;
 import com.eum.hello_lux_quiz.global.common.MessageResponse;
 import com.eum.hello_lux_quiz.global.common.SecurityUtil;
+import com.eum.hello_lux_quiz.service.PatientStatusService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,13 +24,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-// quiz_llm 의 controller.DoctorController 와 빈 이름이 겹치지 않도록 명시적 이름 지정
+// 과거 quiz_llm 의 controller.DoctorController 와 통합.
 @RestController("authDoctorController")
 @RequestMapping("/api/doctor")
 @RequiredArgsConstructor
 public class DoctorController {
 
-    private final DoctorService doctorService;
+    private final PatientStatusService patientStatusService;
 
     /** 의사-환자 연동 */
     @PostMapping("/link")
@@ -64,5 +67,17 @@ public class DoctorController {
             @Valid @RequestBody ReportUpdateRequest request) {
         doctorService.saveReport(SecurityUtil.getCurrentUserId(), pCode, request);
         return ResponseEntity.ok(MessageResponse.of("리포트 저장 완료"));
+    }
+
+    /**
+     * 환자 인지 상태(유지/주의/위험) 변경. 이 값은 퀴즈 난이도 산정에 직접 사용된다.
+     * (구버전 controller.DoctorController 의 {@code /paitient_status} 오타 경로를 정정하여 통합)
+     */
+    @PutMapping("/{pCode}/patient-status")
+    public ResponseEntity<DoctorLevelUpdateResponse> updatePatientStatus(
+            @PathVariable Integer pCode,
+            @RequestBody DoctorLevelUpdateRequest request) {
+        patientStatusService.updatePatientStatus(pCode, request.getPatientStatus());
+        return ResponseEntity.ok(new DoctorLevelUpdateResponse("난이도 변경 완료"));
     }
 }

@@ -30,7 +30,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException e) {
         return ResponseEntity.badRequest()
-                .body(ErrorResponse.of(ErrorCode.INVALID_INPUT.getStatus().value(), e.getMessage()));
+                .body(ErrorResponse.of(e.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

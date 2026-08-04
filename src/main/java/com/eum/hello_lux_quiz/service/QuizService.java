@@ -198,7 +198,7 @@ public class QuizService {
                 : buildLifeDbContext(pCode);
 
         // 1. 이번에 생성될 세트 순번 계산 (기존 세트 수 + 1)
-        int nextSetCount = quizSetRepository.countByPCode(pCode) + 1;
+        int nextSetCount = (int) quizSetRepository.countByPCode(pCode) + 1;
 
         QuizSet quizSet = new QuizSet(pCode, LocalTime.now(), LocalTime.now(), 0);
         QuizSet savedQuizSet = quizSetRepository.save(quizSet);

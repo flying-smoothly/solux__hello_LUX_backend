@@ -60,7 +60,7 @@ public class PatientController {
     /** 환자 코드 발급/조회 (patient) */
     @GetMapping("/{pCode}/code")
     public ResponseEntity<PatientCodeResponse> getCode(@PathVariable Integer pCode) {
-        Integer code = patientService.getCode(SecurityUtil.getCurrentEmail(), pCode);
+        Integer code = patientService.getCode(SecurityUtil.getCurrentUserId(), pCode);
         return ResponseEntity.ok(new PatientCodeResponse(code));
     }
     

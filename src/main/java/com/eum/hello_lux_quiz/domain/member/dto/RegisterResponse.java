@@ -15,6 +15,7 @@ public record RegisterResponse(
     public static RegisterResponse from(Member member) {
         return new RegisterResponse(
                 member.getUserId(),
+                member.getRole() != null ? member.getRole().name() : null,
                 member.getName()
         );
     }

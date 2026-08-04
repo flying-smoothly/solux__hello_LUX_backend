@@ -42,7 +42,7 @@ public class AuthService {
         Member member = Member.builder()
                 .userId(request.userId())
                 .password(passwordEncoder.encode(request.userPw()))
-                .role(role)
+                .role(null) // 가입 시점엔 역할 미설정, 이후 updateRole 로 지정
                 .name(request.name())
                 .phone(request.phone())
                 .build();

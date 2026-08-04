@@ -42,7 +42,7 @@ public class QuizItem {
     private String options; // 객관식 보기 컬럼
 
     @Column(name = "hints", columnDefinition = "TEXT")
-    private String hints; / 힌트 컬럼 추가 
+    private String hints; // 힌트 컬럼 추가 
 
     // JPA용 기본 생성자
     protected QuizItem() {

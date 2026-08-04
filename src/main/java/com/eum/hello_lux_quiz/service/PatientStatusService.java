@@ -7,12 +7,12 @@ import com.eum.hello_lux_quiz.domain.PatientProfile;
 import com.eum.hello_lux_quiz.repository.PatientProfileRepository;
 
 @Service
-public class PatientService {
+public class PatientStatusService {
 
     private final PatientProfileRepository patientProfileRepository;
 
     // 수동 생성자 주입
-    public PatientService(PatientProfileRepository patientProfileRepository) {
+    public PatientStatusService(PatientProfileRepository patientProfileRepository) {
         this.patientProfileRepository = patientProfileRepository;
     }
 
