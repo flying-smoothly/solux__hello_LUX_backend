@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile; // 
 
 import com.eum.hello_lux_quiz.domain.DetailEvent;
 import com.eum.hello_lux_quiz.domain.LifeDb;
@@ -22,7 +23,8 @@ import lombok.RequiredArgsConstructor;
 public class LifeDbService {
 
     private final LifeDbRepository lifeDbRepository;
-    private final DetailRepository detailRepository; // 💡 DetailRepository 적용
+    private final DetailRepository detailRepository;
+    // private final S3Service s3Service; // S3 서비스 주입 필요
 
     // 1. 삶의 DB 최초 등록
     @Transactional
@@ -31,7 +33,6 @@ public class LifeDbService {
                 ? LocalDate.parse(request.getRecordDate())
                 : LocalDate.now();
 
-        // 수동 생성자로 엔티티 생성
         LifeDb lifeDb = new LifeDb(
                 pCode,
                 request.getTitle(),
@@ -63,11 +64,9 @@ public class LifeDbService {
         LifeDb lifeDb = lifeDbRepository.findById(memoryId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 삶의 DB를 찾을 수 없습니다. id=" + memoryId));
 
-        // 1. 해당 memoryId에 해당하는 세분화 사건 목록 가져오기
         List<DetailEvent> events = detailRepository.findByMemoryId(memoryId);
 
-        // 2. lifeDb와 events를 함께 전달 (인자 2개)
-        return new LifeDbResponseDto(lifeDb, events); // ✅ 해결!
+        return new LifeDbResponseDto(lifeDb, events);
     }
 
     // 3. 환자 삶의 DB 사건 추가 (세분화 테이블 저장)
@@ -104,5 +103,20 @@ public class LifeDbService {
 
         return lifeDb.getMemoryId();
     }
-}
 
+    // 5. 세분화 사건 이미지 업로드 (신규 추가)
+    @Transactional
+    public String uploadImage(Integer pCode, MultipartFile image) {
+        if (image == null || image.isEmpty()) {
+            throw new IllegalArgumentException("업로드할 이미지 파일이 존재하지 않습니다.");
+        }
+
+        실제 S3나 이미지 저장 서버에 업로드 후 접근 URL을 반환하는 로직 구현
+        // 예: String photoUrl = s3Service.upload(image, "patients/" + pCode);
+        
+        // 테스트용 가상 반환값 (실제 구현 시 S3 업로드 URL 리턴)
+        String photoUrl = "https://image.com/" + image.getOriginalFilename();
+        
+        return photoUrl;
+    }
+}
