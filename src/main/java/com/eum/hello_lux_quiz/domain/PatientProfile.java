@@ -1,6 +1,5 @@
 package com.eum.hello_lux_quiz.domain;
 
-import com.eum.hello_lux_quiz.domain.converter.VoiceSettingConverter;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
