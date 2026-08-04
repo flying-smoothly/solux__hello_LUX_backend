@@ -1,11 +1,14 @@
 package com.eum.hello_lux_quiz.service;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile; // 
+import org.springframework.web.multipart.MultipartFile;
 
 import com.eum.hello_lux_quiz.domain.DetailEvent;
 import com.eum.hello_lux_quiz.domain.LifeDb;
@@ -17,6 +20,9 @@ import com.eum.hello_lux_quiz.repository.DetailRepository;
 import com.eum.hello_lux_quiz.repository.LifeDbRepository;
 
 import lombok.RequiredArgsConstructor;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Service
 @RequiredArgsConstructor
@@ -24,7 +30,13 @@ public class LifeDbService {
 
     private final LifeDbRepository lifeDbRepository;
     private final DetailRepository detailRepository;
-    // private final S3Service s3Service; // S3 서비스 주입 필요
+    private final S3Client s3Client; // Cloudflare R2 연동용 S3 Client 주입
+
+    @Value("${cloudflare.r2.bucket-name}")
+    private String bucketName;
+
+    @Value("${cloudflare.r2.public-url}")
+    private String publicUrl;
 
     // 1. 삶의 DB 최초 등록
     @Transactional
@@ -104,19 +116,31 @@ public class LifeDbService {
         return lifeDb.getMemoryId();
     }
 
-    // 5. 세분화 사건 이미지 업로드 (신규 추가)
+    // 5. 세분화 사건 이미지 업로드 (Cloudflare R2 적용)
     @Transactional
     public String uploadImage(Integer pCode, MultipartFile image) {
         if (image == null || image.isEmpty()) {
             throw new IllegalArgumentException("업로드할 이미지 파일이 존재하지 않습니다.");
         }
 
-        실제 S3나 이미지 저장 서버에 업로드 후 접근 URL을 반환하는 로직 구현
-        // 예: String photoUrl = s3Service.upload(image, "patients/" + pCode);
-        
-        // 테스트용 가상 반환값 (실제 구현 시 S3 업로드 URL 리턴)
-        String photoUrl = "https://image.com/" + image.getOriginalFilename();
-        
-        return photoUrl;
+        // 파일명 중복 방지를 위한 UUID 적용 (경로: patients/{pCode}/UUID_originalName)
+        String fileName = "patients/" + pCode + "/" + UUID.randomUUID() + "_" + image.getOriginalFilename();
+
+        try {
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(fileName)
+                    .contentType(image.getContentType())
+                    .build();
+
+            // Cloudflare R2에 업로드 실행
+            s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(image.getInputStream(), image.getSize()));
+
+            // 업로드 완료 후 이미지에 접근할 수 있는 URL 리턴
+            return publicUrl + "/" + fileName;
+
+        } catch (IOException e) {
+            throw new RuntimeException("Cloudflare R2 이미지 업로드 중 오류가 발생했습니다.", e);
+        }
     }
 }
