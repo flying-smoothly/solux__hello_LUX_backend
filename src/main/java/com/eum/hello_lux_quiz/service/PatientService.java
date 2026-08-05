@@ -17,22 +17,7 @@ public class PatientService {
     public PatientService(PatientProfileRepository patientProfileRepository) {
         this.patientProfileRepository = patientProfileRepository;
     }
-
-    /**
-     * 의사 환자 난이도/상태 변경 (DoctorController 전용 - String 수신)
-     */
-    @Transactional
-    public void updatePatientStatus(Integer pCode, String newStatus) {
-        if (newStatus == null || newStatus.isBlank()) {
-            throw new IllegalArgumentException("환자 상태 값이 올바르지 않습니다.");
-        }
-
-        PatientProfile profile = patientProfileRepository.findByPCode(pCode)
-                .orElseThrow(() -> new IllegalArgumentException("해당 환자의 프로필을 찾을 수 없습니다. pCode=" + pCode));
-
-        profile.updatePatientStatus(newStatus);
-    }
-
+    
     /**
      * 의사가 환자의 인지 상태, 인지 지원 수준, 보호자 동행 여부를 변경하는 기능 (DTO 수신)
      */

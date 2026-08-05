@@ -3,6 +3,9 @@ package com.eum.hello_lux_quiz.service;
 import com.eum.hello_lux_quiz.domain.*;
 import com.eum.hello_lux_quiz.dto.*;
 import com.eum.hello_lux_quiz.repository.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,6 +14,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -25,16 +29,18 @@ public class QuizService {
     private final DetailRepository detailRepository; // 세분화 Repository
     private final QuizGeneratorService quizGeneratorService;
     private final QuizScoringService quizScoringService;
+    private final ObjectMapper objectMapper; // JSON 변환용 ObjectMapper
 
     public QuizService(QuizSetRepository quizSetRepository,
-                       QuizItemRepository quizItemRepository,
-                       QuizResultRepository quizResultRepository,
-                       QuizFeedbackRepository quizFeedbackRepository,
-                       PatientProfileRepository patientProfileRepository,
-                       LifeDbRepository lifeDbRepository,
-                       DetailRepository detailRepository,
-                       QuizGeneratorService quizGeneratorService,
-                       QuizScoringService quizScoringService) {
+            QuizItemRepository quizItemRepository,
+            QuizResultRepository quizResultRepository,
+            QuizFeedbackRepository quizFeedbackRepository,
+            PatientProfileRepository patientProfileRepository,
+            LifeDbRepository lifeDbRepository,
+            DetailRepository detailRepository,
+            QuizGeneratorService quizGeneratorService,
+            QuizScoringService quizScoringService,
+            ObjectMapper objectMapper) {
         this.quizSetRepository = quizSetRepository;
         this.quizItemRepository = quizItemRepository;
         this.quizResultRepository = quizResultRepository;
@@ -44,6 +50,7 @@ public class QuizService {
         this.detailRepository = detailRepository;
         this.quizGeneratorService = quizGeneratorService;
         this.quizScoringService = quizScoringService;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -59,13 +66,14 @@ public class QuizService {
         contextBuilder.append("=== 환자 회상 정보 (삶의DB 및 세분화 사건) ===\n");
 
         for (LifeDb memory : lifeDbList) {
+            String formattedFamily = formatFamilyInfo(memory.getFamily());
             contextBuilder.append(String.format("""
                 - 고향: %s / 직업: %s / 가족: %s
                 - 좋아하는 것: %s / 주요 장소: %s / 제목: %s
                 """,
                     memory.getHometown(),
                     memory.getJob(),
-                    memory.getFamily(),
+                    formattedFamily,
                     memory.getLikes(),
                     memory.getPlace(),
                     memory.getTitle()
@@ -92,13 +100,30 @@ public class QuizService {
 
         return contextBuilder.toString();
     }
+    // JSON [family] 텍스트를 읽기 편한 "이름(호칭)" 문자열로 변환하는 헬퍼 메서드
+    private String formatFamilyInfo(String familyJson) {
+        if (familyJson == null || familyJson.isBlank()) {
+            return "없음";
+        }
+        try {
+            List<FamilyDto> familyList = objectMapper.readValue(familyJson, new TypeReference<List<FamilyDto>>() {
+            });
+            if (familyList.isEmpty()) {
+                return "없음";
+            }
+            return familyList.stream()
+                    .map(f -> String.format("%s (%s)", f.getName(), f.getRelation()))
+                    .collect(Collectors.joining(", "));
+        } catch (JsonProcessingException e) {
+            return familyJson;
+        }
+    }
 
     /**
      * 오늘의 퀴즈 목록 조회 (없으면 생성)
      */
     @Transactional
     public List<QuizItemDto> getOrCreateTodayQuiz(Integer pCode, String lifeDbContext) {
-        // lifeDbContext가 외부에서 전달되지 않은 경우 자동 생성
         String finalContext = (lifeDbContext != null && !lifeDbContext.isBlank())
                 ? lifeDbContext
                 : buildLifeDbContext(pCode);
@@ -111,7 +136,7 @@ public class QuizService {
             QuizItemDto dto = new QuizItemDto();
 
             dto.setSetId(savedQuizSet.getSetId());
-            dto.setPCode(pCode);
+            // p_code(6자리 연동 코드)는 API 경계의 값이므로 컨트롤러에서 채운다.
 
             dto.setQuizNum(item.getQuizNum());
             dto.setLevel(item.getLevel());
@@ -120,12 +145,10 @@ public class QuizService {
             dto.setQuizPhoto(item.getQuizPhoto());
             dto.setAnswer(item.getAnswer());
 
-            // 1. 객관식 보기 (options) 매핑
             if (item.getOptions() != null && !item.getOptions().isBlank()) {
                 dto.setOptions(List.of(item.getOptions().split(",\\s*")));
             }
 
-            // 2. 💡 힌트 (hints) 매핑 추가
             if (item.getHints() != null && !item.getHints().isBlank()) {
                 dto.setHints(List.of(item.getHints().split(",\\s*")));
             }
@@ -155,11 +178,10 @@ public class QuizService {
      * 2. 모든 퀴즈 완료 시 제출 처리 + 3. 다음 퀴즈 세트 미리 자동 생성
      */
     @Transactional
-    public void submitQuizResult(QuizResultSubmitRequest request, String lifeDbContext) {
-        // (1) 퀴즈 결과 DB 저장
+    public void submitQuizResult(Integer pCode, QuizResultSubmitRequest request, String lifeDbContext) {
         QuizResult quizResult = new QuizResult(
                 request.getSetId(),
-                request.getPCode(),
+                pCode,
                 LocalDate.now(),
                 request.getTotalCount(),
                 request.getCorrectCount(),
@@ -168,7 +190,6 @@ public class QuizService {
         );
         quizResultRepository.save(quizResult);
 
-        // (2) 피드백 저장
         if (request.getFeedbackContent() != null && !request.getFeedbackContent().isBlank()) {
             QuizFeedback quizFeedback = new QuizFeedback(
                     request.getSetId(),
@@ -178,13 +199,11 @@ public class QuizService {
             quizFeedbackRepository.save(quizFeedback);
         }
 
-        // Context 가 비어있다면 새로 빌드
         String finalContext = (lifeDbContext != null && !lifeDbContext.isBlank())
                 ? lifeDbContext
-                : buildLifeDbContext(request.getPCode());
+                : buildLifeDbContext(pCode);
 
-        // (3) 다음 풀 퀴즈 세트 미리 자동 생성
-        createQuizSet(request.getPCode(), finalContext);
+        createQuizSet(pCode, finalContext);
     }
 
     /**

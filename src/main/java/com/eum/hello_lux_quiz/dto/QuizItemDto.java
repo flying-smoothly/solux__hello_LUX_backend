@@ -36,7 +36,7 @@ public class QuizItemDto {
     private Integer setId;
 
     @JsonProperty("p_code")
-    private Integer pCode;
+    private String pCode;
 
     // ========================================================
     //  IDE Lombok 인식 오류 및 타입 불일치 방지용 수동 Getter / Setter
@@ -126,11 +126,11 @@ public class QuizItemDto {
         this.setId = setId;
     }
 
-    public Integer getPCode() {
+    public String getPCode() {
         return pCode;
     }
 
-    public void setPCode(Integer pCode) {
+    public void setPCode(String pCode) {
         this.pCode = pCode;
     }
 }

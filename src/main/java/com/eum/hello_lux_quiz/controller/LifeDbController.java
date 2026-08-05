@@ -1,7 +1,6 @@
 package com.eum.hello_lux_quiz.controller;
 
 import com.eum.hello_lux_quiz.domain.patient.service.PatientService;
-
 import com.eum.hello_lux_quiz.dto.*;
 import com.eum.hello_lux_quiz.service.LifeDbService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +20,7 @@ import java.util.Map;
 public class LifeDbController {
 
     // 연동용 코드(p_code, 예: "AB37X2")를 내부 식별자로 변환하기 위해 사용한다.
+    private final PatientService patientService;
     private final LifeDbService lifeDbService;
 
     // 1. 환자 삶의 DB 최초 등록
@@ -29,10 +29,12 @@ public class LifeDbController {
             @PathVariable("p_code") String patientCode,
             @RequestBody LifeDbRequestDto request) {
 
+        Integer pCode = patientService.resolvePCode(patientCode);
+
         Integer memoryId = lifeDbService.saveLifeDb(pCode, request);
 
         Map<String, Object> response = Map.of(
-                "p_code", pCode,
+                "p_code", patientService.getPatientCode(pCode),
                 "memory_id", memoryId,
                 "message", "삶의 DB 저장"
         );
@@ -42,9 +44,10 @@ public class LifeDbController {
     // 2. 환자 삶의 DB 조회
     @GetMapping("/{p_code}/memories/{memory_id}")
     public ResponseEntity<LifeDbResponseDto> getLifeDb(
-            @PathVariable("p_code") Integer pCode,
+            @PathVariable("p_code") String patientCode,
             @PathVariable("memory_id") Integer memoryId) {
 
+        Integer pCode = patientService.resolvePCode(patientCode);
         LifeDbResponseDto response = lifeDbService.getLifeDb(pCode, memoryId);
         return ResponseEntity.ok(response);
     }
@@ -52,10 +55,11 @@ public class LifeDbController {
     // 3. 환자 삶의 DB 사건 추가
     @PostMapping("/{p_code}/memories/{memory_id}")
     public ResponseEntity<?> addLifeDbEvent(
-            @PathVariable("p_code") Integer pCode,
+            @PathVariable("p_code") String patientCode,
             @PathVariable("memory_id") Integer memoryId,
             @RequestBody LifeDbEventRequestDto request) {
 
+        Integer pCode = patientService.resolvePCode(patientCode);
         Integer eventId = lifeDbService.addEventToLifeDb(pCode, memoryId, request);
 
         Map<String, Object> response = Map.of(
@@ -69,9 +73,10 @@ public class LifeDbController {
     // 4. 삶의 DB 수정
     @PatchMapping("/{p_code}/memories")
     public ResponseEntity<?> updateLifeDb(
-            @PathVariable("p_code") Integer pCode,
+            @PathVariable("p_code") String patientCode,
             @RequestBody LifeDbUpdateRequestDto request) {
 
+        Integer pCode = patientService.resolvePCode(patientCode);
         Integer updatedMemoryId = lifeDbService.updateLifeDb(pCode, request);
 
         Map<String, Object> response = Map.of(

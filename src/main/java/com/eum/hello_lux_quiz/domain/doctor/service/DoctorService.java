@@ -45,7 +45,7 @@ public class DoctorService {
                 .pCode(pCode)
                 .userId(userId)
                 .build());
-        return "의사-환자 연동 성공";
+        return patientService.getPatientName(pCode);
     }
 
     /**

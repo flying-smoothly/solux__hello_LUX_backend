@@ -31,6 +31,10 @@ public class QuizController {
 
         Integer pCode = patientService.resolvePCode(patientCode);
         List<QuizItemDto> todayQuizzes = quizService.getOrCreateTodayQuiz(pCode, "");
+        // 응답의 p_code 는 요청과 동일한 6자리 연동 코드로 돌려준다.
+        String canonicalCode = patientService.getPatientCode(pCode);
+        todayQuizzes.forEach(quiz -> quiz.setPCode(canonicalCode));
+
         return ResponseEntity.ok(todayQuizzes);
     }
 
@@ -111,7 +115,8 @@ public class QuizController {
     public ResponseEntity<Map<String, String>> submitQuizResult(
             @RequestBody QuizResultSubmitRequest request) {
 
-        quizService.submitQuizResult(request, "");
+        Integer pCode = patientService.resolvePCode(request.getPCode());
+        quizService.submitQuizResult(pCode, request, "");
         return ResponseEntity.ok(Map.of("message", "퀴즈 결과 제출 및 다음 세트 생성이 완료되었습니다."));
     }
 }
