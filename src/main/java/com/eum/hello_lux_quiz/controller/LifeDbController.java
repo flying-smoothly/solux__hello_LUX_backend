@@ -1,5 +1,7 @@
 package com.eum.hello_lux_quiz.controller;
 
+import com.eum.hello_lux_quiz.domain.patient.service.PatientService;
+
 import com.eum.hello_lux_quiz.dto.*;
 import com.eum.hello_lux_quiz.service.LifeDbService;
 import lombok.RequiredArgsConstructor;
@@ -9,17 +11,22 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+/**
+ * 삶의 DB API (퀴즈 API 와 동일하게 6자리 연동 코드(문자열)를 받는다.)
+*/
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/patients")
 public class LifeDbController {
 
+    // 연동용 코드(p_code, 예: "AB37X2")를 내부 식별자로 변환하기 위해 사용한다.
     private final LifeDbService lifeDbService;
 
     // 1. 환자 삶의 DB 최초 등록
     @PostMapping("/{p_code}/memories")
     public ResponseEntity<?> createLifeDb(
-            @PathVariable("p_code") Integer pCode,
+            @PathVariable("p_code") String patientCode,
             @RequestBody LifeDbRequestDto request) {
 
         Integer memoryId = lifeDbService.saveLifeDb(pCode, request);
