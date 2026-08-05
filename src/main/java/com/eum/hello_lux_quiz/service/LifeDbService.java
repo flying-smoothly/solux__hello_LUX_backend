@@ -1,10 +1,14 @@
 package com.eum.hello_lux_quiz.service;
 
+import java.io.File;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.eum.hello_lux_quiz.domain.DetailEvent;
 import com.eum.hello_lux_quiz.domain.LifeDb;
@@ -22,7 +26,9 @@ import lombok.RequiredArgsConstructor;
 public class LifeDbService {
 
     private final LifeDbRepository lifeDbRepository;
-    private final DetailRepository detailRepository; // 💡 DetailRepository 적용
+    private final DetailRepository detailRepository;
+
+    private final String uploadDir = System.getProperty("user.dir") + "/uploads/";
 
     // 1. 삶의 DB 최초 등록
     @Transactional
@@ -31,7 +37,6 @@ public class LifeDbService {
                 ? LocalDate.parse(request.getRecordDate())
                 : LocalDate.now();
 
-        // 수동 생성자로 엔티티 생성
         LifeDb lifeDb = new LifeDb(
                 pCode,
                 request.getTitle(),
@@ -63,14 +68,12 @@ public class LifeDbService {
         LifeDb lifeDb = lifeDbRepository.findById(memoryId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 삶의 DB를 찾을 수 없습니다. id=" + memoryId));
 
-        // 1. 해당 memoryId에 해당하는 세분화 사건 목록 가져오기
         List<DetailEvent> events = detailRepository.findByMemoryId(memoryId);
 
-        // 2. lifeDb와 events를 함께 전달 (인자 2개)
-        return new LifeDbResponseDto(lifeDb, events); // ✅ 해결!
+        return new LifeDbResponseDto(lifeDb, events);
     }
 
-    // 3. 환자 삶의 DB 사건 추가 (세분화 테이블 저장)
+    // 3. 환자 삶의 DB 사건 추가
     @Transactional
     public Integer addEventToLifeDb(Integer pCode, Integer memoryId, LifeDbEventRequestDto request) {
         if (!lifeDbRepository.existsById(memoryId)) {
@@ -88,7 +91,7 @@ public class LifeDbService {
         return savedEvent.getEventId();
     }
 
-    // 4. 삶의 DB 수정 (삶의DB 테이블 기본 정보 수정)
+    // 4. 삶의 DB 수정
     @Transactional
     public Integer updateLifeDb(Integer pCode, LifeDbUpdateRequestDto request) {
         LifeDb lifeDb = lifeDbRepository.findById(request.getMemoryId())
@@ -104,5 +107,29 @@ public class LifeDbService {
 
         return lifeDb.getMemoryId();
     }
-}
 
+    // 5. 환자 이미지 파일 업로드
+    @Transactional
+    public String uploadPatientImage(Integer pCode, MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("업로드할 파일이 비어있습니다.");
+        }
+
+        File dir = new File(uploadDir);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        String originalFilename = file.getOriginalFilename();
+        String storeFileName = UUID.randomUUID().toString() + "_" + originalFilename;
+        String fullPath = uploadDir + storeFileName;
+
+        try {
+            file.transferTo(new File(fullPath));
+        } catch (IOException e) {
+            throw new RuntimeException("파일 저장 중 오류가 발생했습니다.", e);
+        }
+
+        return "/images/" + storeFileName;
+    }
+}
