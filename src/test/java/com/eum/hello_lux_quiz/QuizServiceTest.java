@@ -33,8 +33,10 @@ import com.eum.hello_lux_quiz.repository.QuizResultRepository;
 import com.eum.hello_lux_quiz.repository.QuizSetRepository;
 import com.eum.hello_lux_quiz.service.QuizGeneratorService;
 import com.eum.hello_lux_quiz.service.QuizScoringService;
+import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
+@Transactional
 class QuizServiceTest {
 
     @Autowired
@@ -161,6 +163,7 @@ class QuizServiceTest {
 
         // (2) 퀴즈 아이템 DB 저장 및 임의 답안 채점 진행
         int correctCount = 0;
+        int quizNumCounter = 1; // 👈 quizNum 지정을 위한 카운터 변수 추가
 
         System.out.println("\n==================================================");
         System.out.println(" 📝 [START] 생성된 퀴즈 풀이 및 LLM 채점 시작");
@@ -179,6 +182,7 @@ class QuizServiceTest {
             QuizItem quizItem = new QuizItem(
                     savedQuizSet.getSetId(),
                     targetPCode,
+                    quizNumCounter++, // 👈 3번째 인자에 Integer 타입의 quizNumCounter 전달
                     dto.getQuizCategory() != null ? dto.getQuizCategory() : "text",
                     dto.getLevel(),
                     dto.getQuizComment(),
