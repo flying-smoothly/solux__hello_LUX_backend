@@ -85,4 +85,20 @@ public class LifeDbController {
         );
         return ResponseEntity.ok(response);
     }
+    // 5. 환자 이미지/사진 업로드 (Multipart)
+    @PostMapping(value = "/{p_code}/images", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> uploadPatientImage(
+            @PathVariable("p_code") Integer pCode,
+            @RequestPart("image") MultipartFile file) {
+
+        // Service 계층에서 파일 저장(S3 또는 서버 로컬) 후 저장된 URL을 반환받음
+        String photoUrl = lifeDbService.uploadPatientImage(pCode, file);
+
+        Map<String, Object> response = Map.of(
+                "photo_url", photoUrl,
+                "message", "이미지가 성공적으로 업로드되었습니다."
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
 }
