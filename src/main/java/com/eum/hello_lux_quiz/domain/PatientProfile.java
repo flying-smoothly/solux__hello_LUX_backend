@@ -44,5 +44,8 @@ public class PatientProfile {
     public void updatePatientStatus(String patientStatus) {
         this.patientStatus = patientStatus;
     }
+    public String getPatientStatus() {
+        return this.patientStatus;
+    }
 }
 
