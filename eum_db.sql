@@ -14,8 +14,9 @@ CREATE TABLE `회원` (
 
 -- 2. 환자
 CREATE TABLE `환자` (
-  `p_code`     integer      NOT NULL AUTO_INCREMENT,
-  `user_email` varchar(255) NOT NULL,
+  `p_code`       integer      NOT NULL AUTO_INCREMENT,
+  `user_email`   varchar(255) NOT NULL,
+  `patient_code` varchar(6)   NOT NULL UNIQUE COMMENT,
   PRIMARY KEY (`p_code`),
   CONSTRAINT `FK_환자_회원`
     FOREIGN KEY (`user_email`) REFERENCES `회원` (`user_email`)
