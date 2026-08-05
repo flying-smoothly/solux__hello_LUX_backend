@@ -21,7 +21,7 @@ public class QuizItem {
     private Integer quizNum;
 
     @Column(name = "score")
-    private Integer score;
+    private Integer score = 0;
 
     @Column(name = "quiz_category", nullable = false, length = 50)
     private String quizCategory;
@@ -65,6 +65,7 @@ public class QuizItem {
         this.answer = answer;
         this.options = options;
         this.hints = hints;
+        this.score = 0;
     }
 
     // --- 수동 Getter ---
