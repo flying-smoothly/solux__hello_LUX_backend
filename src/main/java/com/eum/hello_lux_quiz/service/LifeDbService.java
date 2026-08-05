@@ -1,11 +1,11 @@
 package com.eum.hello_lux_quiz.service;
 
-import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,6 +20,9 @@ import com.eum.hello_lux_quiz.repository.DetailRepository;
 import com.eum.hello_lux_quiz.repository.LifeDbRepository;
 
 import lombok.RequiredArgsConstructor;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +31,14 @@ public class LifeDbService {
     private final LifeDbRepository lifeDbRepository;
     private final DetailRepository detailRepository;
 
-    private final String uploadDir = System.getProperty("user.dir") + "/uploads/";
+    // R2 업로드를 위한 S3Client 및 설정값 주입
+    private final S3Client s3Client;
+
+    @Value("${cloudflare.r2.bucket-name}")
+    private String bucketName;
+
+    @Value("${cloudflare.r2.public-url}") // R2 커스텀 도메인 또는 R2.dev 퍼블릭 URL
+    private String publicUrl;
 
     // 1. 삶의 DB 최초 등록
     @Transactional
@@ -108,28 +118,30 @@ public class LifeDbService {
         return lifeDb.getMemoryId();
     }
 
-    // 5. 환자 이미지 파일 업로드
+    // 5. 환자 이미지 파일 업로드 (Cloudflare R2)
     @Transactional
     public String uploadPatientImage(Integer pCode, MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("업로드할 파일이 비어있습니다.");
         }
 
-        File dir = new File(uploadDir);
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
-
-        String originalFilename = file.getOriginalFilename();
-        String storeFileName = UUID.randomUUID().toString() + "_" + originalFilename;
-        String fullPath = uploadDir + storeFileName;
+        String storeFileName = "patients/" + pCode + "/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
 
         try {
-            file.transferTo(new File(fullPath));
-        } catch (IOException e) {
-            throw new RuntimeException("파일 저장 중 오류가 발생했습니다.", e);
-        }
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(storeFileName)
+                    .contentType(file.getContentType())
+                    .build();
 
-        return "/images/" + storeFileName;
+            s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+
+            // 저장된 이미지의 접근 가능한 URL 반환
+            return publicUrl + "/" + storeFileName;
+
+        } catch (IOException e) {
+            throw new RuntimeException("R2 파일 업로드 중 오류가 발생했습니다.", e);
+        }
     }
 }
+
