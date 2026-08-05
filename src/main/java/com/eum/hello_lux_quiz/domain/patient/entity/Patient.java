@@ -52,24 +52,37 @@ public class Patient {
     @Column(name = "diagnosis", nullable = false, length = 100)
     private String diagnosis;
 
-    @Column(name = "personality", nullable = false, columnDefinition = "TEXT")
+    /** 성격. 화면 입력칸이 없는 상황. 따라 선택 입력(nullable)으로 변경했습니다 */
+    @Column(name = "personality", columnDefinition = "TEXT")
     private String personality;
 
-    @Column(name = "speech_style", nullable = false, columnDefinition = "TEXT")
+    /** 말투. (nullable). */
+    @Column(name = "speech_style", columnDefinition = "TEXT")
     private String speechStyle;
+
+     /** 인지 지원 수준(낮음/보통/높음). S05 화면 입력. */
+    @Column(name = "cognitive_support_level", length = 10)
+    private String cognitiveSupportLevel;
+
+    /** 보호자 동행 여부. S05 화면 입력. */
+    @Column(name = "guardian_companion")
+    private Boolean guardianCompanion;
 
     @Column(name = "patient_status", length = 50)
     private String patientStatus;
 
     @Builder
     public Patient(String userId, String patientCode, String gender, String diagnosis,
-                   String personality, String speechStyle, String patientStatus) {
+                   String personality, String speechStyle, String cognitiveSupportLevel,
+                   Boolean guardianCompanion, String patientStatus) {
         this.userId = userId;
         this.patientCode = patientCode;
         this.gender = gender;
         this.diagnosis = diagnosis;
         this.personality = personality;
         this.speechStyle = speechStyle;
+        this.cognitiveSupportLevel = cognitiveSupportLevel;
+        this.guardianCompanion = guardianCompanion;
         this.patientStatus = patientStatus;
     }
 

@@ -50,6 +50,8 @@ public class PatientService {
                 .patientCode(generatePatientCode())
                 .gender(request.gender())
                 .diagnosis(request.diagnosis())
+                .cognitiveSupportLevel(request.cognitiveSupportLevel())
+                .guardianCompanion(request.guardianCompanion())
                 .personality(request.personality())
                 .speechStyle(request.speechStyle())
                 .build());
