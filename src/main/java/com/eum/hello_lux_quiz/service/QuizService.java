@@ -24,7 +24,7 @@ public class QuizService {
     private final QuizItemRepository quizItemRepository;
     private final QuizResultRepository quizResultRepository;
     private final QuizFeedbackRepository quizFeedbackRepository;
-    private final PatientProfileRepository patientProfileRepository;
+    private final PatientProfileProvisioner patientProfileProvisioner;
     private final LifeDbRepository lifeDbRepository;
     private final DetailRepository detailRepository; // 세분화 Repository
     private final QuizGeneratorService quizGeneratorService;
@@ -35,7 +35,7 @@ public class QuizService {
             QuizItemRepository quizItemRepository,
             QuizResultRepository quizResultRepository,
             QuizFeedbackRepository quizFeedbackRepository,
-            PatientProfileRepository patientProfileRepository,
+            PatientProfileProvisioner patientProfileProvisioner,
             LifeDbRepository lifeDbRepository,
             DetailRepository detailRepository,
             QuizGeneratorService quizGeneratorService,
@@ -45,7 +45,7 @@ public class QuizService {
         this.quizItemRepository = quizItemRepository;
         this.quizResultRepository = quizResultRepository;
         this.quizFeedbackRepository = quizFeedbackRepository;
-        this.patientProfileRepository = patientProfileRepository;
+        this.patientProfileProvisioner = patientProfileProvisioner;
         this.lifeDbRepository = lifeDbRepository;
         this.detailRepository = detailRepository;
         this.quizGeneratorService = quizGeneratorService;
@@ -223,8 +223,7 @@ public class QuizService {
         QuizSet savedQuizSet = quizSetRepository.save(quizSet);
 
         // 환자 프로필 조회
-        PatientProfile profile = patientProfileRepository.findByPCode(pCode)
-                .orElseThrow(() -> new IllegalArgumentException("환자 프로필을 찾을 수 없습니다. pCode=" + pCode));
+        PatientProfile profile = patientProfileProvisioner.getOrCreate(pCode);
 
         String patientStatus = profile.getPatientStatus() != null ? profile.getPatientStatus() : "유지";
 

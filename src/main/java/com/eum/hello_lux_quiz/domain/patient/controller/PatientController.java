@@ -6,6 +6,7 @@ import com.eum.hello_lux_quiz.domain.patient.dto.PatientCodeResponse;
 import com.eum.hello_lux_quiz.domain.patient.dto.PatientInfoResponse;
 import com.eum.hello_lux_quiz.domain.patient.dto.PatientRegisterRequest;
 import com.eum.hello_lux_quiz.domain.patient.dto.PatientRegisterResponse;
+import com.eum.hello_lux_quiz.domain.patient.dto.PatientMeResponse;
 import com.eum.hello_lux_quiz.domain.patient.dto.PatientUpdateRequest;
 import com.eum.hello_lux_quiz.domain.patient.service.PatientService;
 import com.eum.hello_lux_quiz.global.common.MessageResponse;
@@ -43,6 +44,16 @@ public class PatientController {
             @Valid @RequestBody PatientRegisterRequest request) {
         PatientRegisterResponse response = patientService.register(SecurityUtil.getCurrentUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * 로그인한 환자 본인 정보 조회 (patient).
+     * 내부 식별자(internal_code)와 6자리 연동 코드(p_code)를 함께 돌려주므로,
+     * 등록 응답을 놓쳤거나 다른 기기에서 재로그인한 경우에도 코드를 다시 얻을 수 있다.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<PatientMeResponse> getMe() {
+        return ResponseEntity.ok(patientService.getMe(SecurityUtil.getCurrentUserId()));
     }
 
     /** 환자 정보 조회 (patient / guardian / doctor) */

@@ -11,11 +11,10 @@ import com.eum.hello_lux_quiz.repository.PatientProfileRepository;
 
 @Service
 public class PatientService {
+    private final PatientProfileProvisioner patientProfileProvisioner;
 
-    private final PatientProfileRepository patientProfileRepository;
-
-    public PatientService(PatientProfileRepository patientProfileRepository) {
-        this.patientProfileRepository = patientProfileRepository;
+    public PatientService(PatientProfileProvisioner patientProfileProvisioner) {
+        this.patientProfileProvisioner = patientProfileProvisioner;
     }
     
     /**
@@ -29,8 +28,7 @@ public class PatientService {
             throw new IllegalArgumentException("올바르지 않은 환자 상태 값입니다. (유지/주의/위험 중 선택)");
         }
 
-        PatientProfile profile = patientProfileRepository.findByPCode(pCode)
-                .orElseThrow(() -> new IllegalArgumentException("해당 환자의 프로필을 찾을 수 없습니다. pCode=" + pCode));
+        PatientProfile profile = patientProfileProvisioner.getOrCreate(pCode);
 
         profile.updatePatientStatus(newStatus);
 
@@ -46,9 +44,8 @@ public class PatientService {
      * 환자의 음성 설정 7종을 저장 및 업데이트하는 기능
      */
     @Transactional
-    public VoiceSetting updateVoiceSetting(Integer pCode, VoiceSettingRequestDto requestDto) {
-        PatientProfile profile = patientProfileRepository.findByPCode(pCode)
-                .orElseThrow(() -> new IllegalArgumentException("해당 환자의 프로필을 찾을 수 없습니다. pCode=" + pCode));
+    public VoiceSetting updateVoiceSetting(Integer pCode, VoiceSettingRequestDto requestDto) {  
+        PatientProfile profile = patientProfileProvisioner.getOrCreate(pCode);
 
         VoiceSetting currentSetting = profile.getVoiceSetting();
         if (currentSetting == null) {

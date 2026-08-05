@@ -4,6 +4,7 @@ import com.eum.hello_lux_quiz.domain.member.repository.MemberRepository;
 import com.eum.hello_lux_quiz.domain.patient.dto.DailyStatusRequest;
 import com.eum.hello_lux_quiz.domain.patient.dto.DailyStatusResponse;
 import com.eum.hello_lux_quiz.domain.patient.dto.PatientInfoResponse;
+import com.eum.hello_lux_quiz.domain.patient.dto.PatientMeResponse;
 import com.eum.hello_lux_quiz.domain.patient.dto.PatientRegisterRequest;
 import com.eum.hello_lux_quiz.domain.patient.dto.PatientRegisterResponse;
 import com.eum.hello_lux_quiz.domain.patient.dto.PatientUpdateRequest;
@@ -13,6 +14,7 @@ import com.eum.hello_lux_quiz.domain.patient.repository.PatientDailyStatusReposi
 import com.eum.hello_lux_quiz.domain.patient.repository.PatientRepository;
 import com.eum.hello_lux_quiz.global.exception.CustomException;
 import com.eum.hello_lux_quiz.global.exception.ErrorCode;
+import com.eum.hello_lux_quiz.service.PatientProfileProvisioner;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,7 @@ public class PatientService {
     private final PatientRepository patientRepository;
     private final MemberRepository memberRepository;
     private final PatientDailyStatusRepository patientDailyStatusRepository;
+    private final PatientProfileProvisioner patientProfileProvisioner;
 
     /**
      * 환자 기본 정보 등록. 환자 코드(p_code)를 발급하며 상세 정보를 함께 저장한다.
@@ -55,7 +58,8 @@ public class PatientService {
                 .personality(request.personality())
                 .speechStyle(request.speechStyle())
                 .build());
-
+                
+        patientProfileProvisioner.createFrom(patient);
         return new PatientRegisterResponse(patient.getPatientCode(), "환자 등록 완료");
     }
 
@@ -106,6 +110,16 @@ public class PatientService {
      */
     public PatientInfoResponse getInfo(Integer pCode) {
         return PatientInfoResponse.from(getPatient(pCode), getPatientName(pCode));
+     }
+ 
+    /**
+     * 로그인한 환자 본인의 정보 조회. 내부 식별자(internal_code)와 6자리 연동 코드를 함께 돌려준다.
+     * 등록 응답을 놓쳤거나 다른 기기에서 재로그인한 경우 이 API 로 다시 조회한다.
+     */
+    public PatientMeResponse getMe(String userId) {
+        Patient patient = patientRepository.findByUserId(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PATIENT_NOT_FOUND));
+        return PatientMeResponse.from(patient, getPatientName(patient.getPCode()));
     }
 
     /**
