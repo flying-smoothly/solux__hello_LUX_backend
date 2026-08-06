@@ -107,7 +107,8 @@ public class AuthService {
             throw new CustomException(ErrorCode.INVALID_CURRENT_PASSWORD);
         }
 
-        member.updateProfile(request.name(), request.birthDate(), request.phone());
+        // phone은 더 이상 API로 받지 않습니다. Member 엔티티/컬럼은 그대로 두고 값만 갱신 안 함.
+        member.updateProfile(request.name(), request.birthDate(), null);
         if (request.userPw() != null && !request.userPw().isBlank()) {
             member.updatePassword(passwordEncoder.encode(request.userPw()));
         }
