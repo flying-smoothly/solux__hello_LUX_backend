@@ -60,10 +60,7 @@ public class GuardianService {
                 .map(guardian -> {
                     Integer pCode = guardian.getPCode();
                     Integer lastScore = quizStatsPort.getLastScore(pCode);
-                    return new LinkedPatientResponse(
-                            patientService.getPatientCode(pCode),
-                            patientService.getPatientName(pCode),
-                            lastScore);
+                    return new LinkedPatientResponse(pCode, patientService.getPatientName(pCode), lastScore);
                 })
                 .toList();
     }

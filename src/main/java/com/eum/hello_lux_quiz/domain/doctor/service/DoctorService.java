@@ -33,7 +33,7 @@ public class DoctorService {
     private final QuizStatsPort quizStatsPort;
 
     /**
-     * 의사-환자 연동.
+     * 의사-환자 연동. 응답의 patient_name 에 넣을 환자 이름을 돌려준다.
      */
     @Transactional
     public String link(String userId, String patientCode) {

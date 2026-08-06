@@ -27,10 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.util.List;
-/**
- * 환자 API. 경로의 {@code p_code} 는 퀴즈 API 와 동일하게 6자리 연동 코드(문자열)를 받는다.
- * 내부 식별자(Integer)는 {@link PatientService#resolvePCode(String)} 로만 얻는다.
- */
+
 @RestController
 @RequestMapping("/api/patient")
 @RequiredArgsConstructor
@@ -57,53 +54,48 @@ public class PatientController {
     }
 
     /** 환자 정보 조회 (patient / guardian / doctor) */
-    @GetMapping("/{p_code}")
-    public ResponseEntity<PatientInfoResponse> getInfo(@PathVariable("p_code") String patientCode) {
-        return ResponseEntity.ok(patientService.getInfo(patientService.resolvePCode(patientCode)));
-    }
+    @GetMapping("/{pCode}")
+    public ResponseEntity<PatientInfoResponse> getInfo(@PathVariable Integer pCode) {
+        return ResponseEntity.ok(patientService.getInfo(pCode));
 
     /** 환자 정보 수정 (patient) */
-    @PutMapping("/{p_code}")
+    @PutMapping("/{pCode}")
     public ResponseEntity<MessageResponse> update(
-            @PathVariable("p_code") String patientCode,
+            @PathVariable Integer pCode,
             @RequestBody PatientUpdateRequest request) {
-        Integer pCode = patientService.resolvePCode(patientCode);
         patientService.update(SecurityUtil.getCurrentUserId(), pCode, request);
         return ResponseEntity.ok(MessageResponse.of("수정 완료"));
     }
 
     /** 환자 코드 발급/조회 (patient) */
-    @GetMapping("/{p_code}/code")
-    public ResponseEntity<PatientCodeResponse> getCode(@PathVariable("p_code") String patientCode) {
-        Integer pCode = patientService.resolvePCode(patientCode);
-        String code = patientService.getCode(SecurityUtil.getCurrentUserId(), pCode);
+    @GetMapping("/{pCode}/code")
+    public ResponseEntity<PatientCodeResponse> getCode(@PathVariable Integer pCode) {
+        Integer code = patientService.getCode(SecurityUtil.getCurrentUserId(), pCode);
         return ResponseEntity.ok(new PatientCodeResponse(code));
     }
     
     /** 환자 일일 상태(건강 체크) 입력 (patient) — 하루 1건, 재입력 시 갱신 */
-    @PostMapping("/{p_code}/daily-status")
+    @PostMapping("/{pCode}/daily-status")
     public ResponseEntity<DailyStatusResponse> saveDailyStatus(
-            @PathVariable("p_code") String patientCode,
+            @PathVariable Integer pCode,
             @RequestBody DailyStatusRequest request) {
-        Integer pCode = patientService.resolvePCode(patientCode);
         DailyStatusResponse response =
                 patientService.saveDailyStatus(SecurityUtil.getCurrentUserId(), pCode, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     /** 환자 일일 상태 조회 (patient / guardian / doctor) — date 미지정 시 오늘 */
-    @GetMapping("/{p_code}/daily-status")
+    @GetMapping("/{pCode}/daily-status")
     public ResponseEntity<DailyStatusResponse> getDailyStatus(
-            @PathVariable("p_code") String patientCode,
+            @PathVariable Integer pCode,
             @RequestParam(value = "date", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return ResponseEntity.ok(patientService.getDailyStatus(patientService.resolvePCode(patientCode), date));
+        return ResponseEntity.ok(patientService.getDailyStatus(pCode, date));
     }
 
     /** 환자 일일 상태 기록 전체 조회 (patient / guardian / doctor) */
-    @GetMapping("/{p_code}/daily-status/history")
-    public ResponseEntity<List<DailyStatusResponse>> getDailyStatusHistory(
-            @PathVariable("p_code") String patientCode) {
-        return ResponseEntity.ok(patientService.getDailyStatusHistory(patientService.resolvePCode(patientCode)));
+    @GetMapping("/{pCode}/daily-status/history")
+    public ResponseEntity<List<DailyStatusResponse>> getDailyStatusHistory(@PathVariable Integer pCode) {
+        return ResponseEntity.ok(patientService.getDailyStatusHistory(pCode));
     }
 }

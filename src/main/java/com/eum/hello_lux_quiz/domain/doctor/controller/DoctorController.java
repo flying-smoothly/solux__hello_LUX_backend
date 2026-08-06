@@ -7,7 +7,6 @@ import com.eum.hello_lux_quiz.domain.doctor.dto.LevelRequest;
 import com.eum.hello_lux_quiz.domain.doctor.dto.ReportResponse;
 import com.eum.hello_lux_quiz.domain.doctor.dto.ReportUpdateRequest;
 import com.eum.hello_lux_quiz.domain.doctor.service.DoctorService;
-import com.eum.hello_lux_quiz.domain.patient.service.PatientService;
 import com.eum.hello_lux_quiz.dto.DoctorLevelUpdateRequest;
 import com.eum.hello_lux_quiz.dto.DoctorLevelUpdateResponse;
 import com.eum.hello_lux_quiz.global.common.MessageResponse;
@@ -34,8 +33,6 @@ public class DoctorController {
 
     private final DoctorService doctorService;
     private final PatientStatusService patientStatusService;
-    // 연동용 코드(p_code, 예: "AB37X2")를 내부 식별자로 변환하기 위해 사용한다.
-    private final PatientService patientService;
 
     /** 의사-환자 연동 */
     @PostMapping("/link")
@@ -51,28 +48,25 @@ public class DoctorController {
     }
 
     /** 진료 참고 리포트 조회 */
-    @GetMapping("/{p_code}/report")
-    public ResponseEntity<ReportResponse> getReport(@PathVariable("p_code") String patientCode) {
-        Integer pCode = patientService.resolvePCode(patientCode);
+    @GetMapping("/{pCode}/report")
+    public ResponseEntity<ReportResponse> getReport(@PathVariable Integer pCode) {
         return ResponseEntity.ok(doctorService.getReport(SecurityUtil.getCurrentUserId(), pCode));
     }
 
     /** 난이도 조절 */
-    @PutMapping("/{p_code}/level")
+    @PutMapping("/{pCode}/level")
     public ResponseEntity<MessageResponse> updateLevel(
-            @PathVariable("p_code") String patientCode, 
+            @PathVariable Integer pCode,
             @Valid @RequestBody LevelRequest request) {
-        Integer pCode = patientService.resolvePCode(patientCode);
         doctorService.updateLevel(SecurityUtil.getCurrentUserId(), pCode, request);
         return ResponseEntity.ok(MessageResponse.of("난이도 변경 완료"));
     }
 
     /** 진료 리포트 작성/수정 */
-    @PutMapping("/{p_code}/report")
+    @PutMapping("/{pCode}/report")
     public ResponseEntity<MessageResponse> saveReport(
-            @PathVariable("p_code") String patientCode,
+            @PathVariable Integer pCode,
             @Valid @RequestBody ReportUpdateRequest request) {
-        Integer pCode = patientService.resolvePCode(patientCode);
         doctorService.saveReport(SecurityUtil.getCurrentUserId(), pCode, request);
         return ResponseEntity.ok(MessageResponse.of("리포트 저장 완료"));
     }
@@ -81,11 +75,10 @@ public class DoctorController {
      * 환자 인지 상태(유지/주의/위험) 변경. 이 값은 퀴즈 난이도 산정에 직접 사용된다.
      * (구버전 controller.DoctorController 의 {@code /paitient_status} 오타 경로를 정정하여 통합)
      */
-    @PutMapping("/{p_code}/patient-status")
+    @PutMapping("/{pCode}/patient-status")
     public ResponseEntity<DoctorLevelUpdateResponse> updatePatientStatus(
-            @PathVariable("p_code") String patientCode,
+            @PathVariable Integer pCode,
             @RequestBody DoctorLevelUpdateRequest request) {
-        Integer pCode = patientService.resolvePCode(patientCode);
         return ResponseEntity.ok(new DoctorLevelUpdateResponse("난이도 변경 완료"));
     }
 }

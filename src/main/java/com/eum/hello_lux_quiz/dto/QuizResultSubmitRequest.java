@@ -1,18 +1,9 @@
 package com.eum.hello_lux_quiz.dto;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 public class QuizResultSubmitRequest {
 
     private Integer setId;
-    /**
-     * 6자리 연동 코드. 명시하지 않으면 Jackson 이 "pcode" 로 매핑하므로 키를 고정한다.
-     * 정수 식별자를 보내던 구버전 클라이언트를 위해 "pcode" 도 함께 받는다.
-     */
-    @JsonProperty("p_code")
-    @JsonAlias({"pcode", "patient_code"})
-    private String pCode;
+    private Integer pCode;
     private Integer totalCount;
     private Integer correctCount;
     private Integer hint;
@@ -32,7 +23,7 @@ public class QuizResultSubmitRequest {
     }
 
     // 전체 필드 수동 생성자
-    public QuizResultSubmitRequest(Integer setId, String pCode, Integer totalCount, Integer correctCount, Integer hint, String caculate, String feedbackContent) {
+    public QuizResultSubmitRequest(Integer setId, Integer pCode, Integer totalCount, Integer correctCount, Integer hint, String caculate, String feedbackContent) {
         this.setId = setId;
         this.pCode = pCode;
         this.totalCount = totalCount;
@@ -51,11 +42,11 @@ public class QuizResultSubmitRequest {
         this.setId = setId;
     }
 
-    public String getPCode() {
+    public Integer getPCode() {
         return pCode;
     }
 
-    public void setPCode(String pCode) {
+    public void setPCode(Integer pCode) {
         this.pCode = pCode;
     }
 

@@ -136,7 +136,7 @@ public class QuizService {
             QuizItemDto dto = new QuizItemDto();
 
             dto.setSetId(savedQuizSet.getSetId());
-            // p_code(6자리 연동 코드)는 API 경계의 값이므로 컨트롤러에서 채운다.
+            dto.setPCode(pCode);
 
             dto.setQuizNum(item.getQuizNum());
             dto.setLevel(item.getLevel());
@@ -178,10 +178,10 @@ public class QuizService {
      * 2. 모든 퀴즈 완료 시 제출 처리 + 3. 다음 퀴즈 세트 미리 자동 생성
      */
     @Transactional
-    public void submitQuizResult(Integer pCode, QuizResultSubmitRequest request, String lifeDbContext) {
+    public void submitQuizResult(QuizResultSubmitRequest request, String lifeDbContext) {
         QuizResult quizResult = new QuizResult(
                 request.getSetId(),
-                pCode,
+                request.getPCode(),
                 LocalDate.now(),
                 request.getTotalCount(),
                 request.getCorrectCount(),
@@ -201,9 +201,9 @@ public class QuizService {
 
         String finalContext = (lifeDbContext != null && !lifeDbContext.isBlank())
                 ? lifeDbContext
-                : buildLifeDbContext(pCode);
+                : buildLifeDbContext(request.getPCode());
 
-        createQuizSet(pCode, finalContext);
+        createQuizSet(request.getPCode(), finalContext);
     }
 
     /**

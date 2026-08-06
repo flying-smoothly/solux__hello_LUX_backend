@@ -60,7 +60,7 @@ public class PatientService {
                 .build());
                 
         patientProfileProvisioner.createFrom(patient);
-        return new PatientRegisterResponse(patient.getPatientCode(), "환자 등록 완료");
+        return new PatientRegisterResponse(patient.getPCode(), patient.getPatientCode(), "환자 등록 완료");
     }
 
     /** 보호자·의사 연동용 6자리 영문+숫자 코드를 중복되지 않게 발급한다(혼동되는 0/O/1/I 제외). */
@@ -81,27 +81,12 @@ public class PatientService {
     }
 
     /**
-     * API 로 들어온 6자리 연동 코드(p_code)를 내부 식별자(Integer)로 변환한다.
-     * 모든 컨트롤러가 이 메서드를 통해서만 내부 식별자를 얻는다.
+     * 연동용 코드(patient_code)로 내부 환자 코드(p_code)를 조회한다. 보호자·의사 연동에서 사용.
      */
     public Integer resolvePCode(String patientCode) {
-        return getByPatientCode(patientCode).getPCode();
-    }
-
-    /**
-     * 내부 식별자로 6자리 연동 코드를 조회한다. 응답 DTO 를 만들 때 사용.
-     */
-    public String getPatientCode(Integer pCode) {
-        return getPatient(pCode).getPatientCode();
-    }
-
-    private Patient getByPatientCode(String patientCode) {
-        if (patientCode == null || patientCode.isBlank()) {
-            throw new CustomException(ErrorCode.INVALID_INPUT);
-        }
-        // 발급 시 대문자만 사용하므로 대소문자/공백 차이는 흡수한다.
-        return patientRepository.findByPatientCode(patientCode.trim().toUpperCase())
-                .orElseThrow(() -> new CustomException(ErrorCode.PATIENT_NOT_FOUND));
+        return patientRepository.findByPatientCode(patientCode)
+                .orElseThrow(() -> new CustomException(ErrorCode.PATIENT_NOT_FOUND))
+                .getPCode();
     }
 
     /**
@@ -133,11 +118,11 @@ public class PatientService {
     }
 
     /**
-     * 환자 코드 조회. 본인만 가능. 보호자·의사에게 알려줄 6자리 연동 코드를 돌려준다.
+     * 환자 코드 조회. 본인만 가능.
      */
-    public String getCode(String email, Integer pCode) {
+    public Integer getCode(String email, Integer pCode) {
         validateOwner(email, pCode);
-        return getPatient(pCode).getPatientCode();
+        return pCode;
     }
 
        // ===== 환자 일일 상태(건강 체크) 입력 =====
