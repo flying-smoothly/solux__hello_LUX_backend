@@ -57,7 +57,7 @@ public class PatientController {
     @GetMapping("/{pCode}")
     public ResponseEntity<PatientInfoResponse> getInfo(@PathVariable Integer pCode) {
         return ResponseEntity.ok(patientService.getInfo(pCode));
-
+    }
     /** 환자 정보 수정 (patient) */
     @PutMapping("/{pCode}")
     public ResponseEntity<MessageResponse> update(

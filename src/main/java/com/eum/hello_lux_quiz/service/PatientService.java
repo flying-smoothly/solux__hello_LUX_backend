@@ -12,9 +12,12 @@ import com.eum.hello_lux_quiz.repository.PatientProfileRepository;
 @Service
 public class PatientService {
     private final PatientProfileProvisioner patientProfileProvisioner;
+    private final PatientProfileRepository patientProfileRepository;
 
-    public PatientService(PatientProfileProvisioner patientProfileProvisioner) {
+    public PatientService(PatientProfileProvisioner patientProfileProvisioner,
+                          PatientProfileRepository patientProfileRepository) {
         this.patientProfileProvisioner = patientProfileProvisioner;
+        this.patientProfileRepository = patientProfileRepository;
     }
     
     /**
