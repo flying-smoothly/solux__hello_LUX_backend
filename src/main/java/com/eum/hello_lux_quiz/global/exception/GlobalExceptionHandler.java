@@ -35,6 +35,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception e) {
+        e.printStackTrace();
         return ResponseEntity.internalServerError()
                 .body(ErrorResponse.of("서버 오류가 발생했습니다."));
     }
