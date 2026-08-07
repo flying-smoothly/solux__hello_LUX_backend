@@ -1,5 +1,6 @@
 package com.eum.hello_lux_quiz.domain.patient.service;
 
+import com.eum.hello_lux_quiz.domain.member.entity.Member;
 import com.eum.hello_lux_quiz.domain.member.repository.MemberRepository;
 import com.eum.hello_lux_quiz.domain.patient.dto.DailyStatusRequest;
 import com.eum.hello_lux_quiz.domain.patient.dto.DailyStatusResponse;
@@ -91,12 +92,13 @@ public class PatientService {
 
     /**
      * 환자 정보 조회. 환자/보호자/의사 공통.
-     * 이름은 회원(Member) 정보에서 조회한다.
+     * 이름/생년월일은 회원(Member) 정보에서 조회한다.
      */
     public PatientInfoResponse getInfo(Integer pCode) {
-        return PatientInfoResponse.from(getPatient(pCode), getPatientName(pCode));
-     }
- 
+        Patient patient = getPatient(pCode);
+        Member member = getPatientMember(patient);
+        return PatientInfoResponse.from(patient, member.getName(), member.getBirthDate());
+    }
     /**
      * 로그인한 환자 본인의 정보 조회. 내부 식별자(internal_code)와 6자리 연동 코드를 함께 돌려준다.
      * 등록 응답을 놓쳤거나 다른 기기에서 재로그인한 경우 이 API 로 다시 조회한다.
@@ -200,10 +202,15 @@ public class PatientService {
      * 환자 이름 조회. 이름은 회원(Member) 에서 관리하므로 p_code -> 회원 으로 조회한다.
      */
     public String getPatientName(Integer pCode) {
-        Patient patient = getPatient(pCode);
+        return getPatientMember(getPatient(pCode)).getName();
+    }
+
+    /**
+     * 환자와 연결된 회원 조회. 이름/생년월일 등 공통 정보는 회원(Member) 에서 관리한다.
+     */
+    private Member getPatientMember(Patient patient) {
         return memberRepository.findByUserId(patient.getUserId())
-                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND))
-                .getName();
+            .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
     }
 
     public void validateExists(Integer pCode) {
