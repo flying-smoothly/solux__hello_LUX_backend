@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")
@@ -108,7 +109,7 @@ public class QuizController {
     // 5. 퀴즈 세트 전체 최종 제출 처리 API
     // POST /api/quiz/result/submit
     // ==========================================
-    @PostMapping("/quiz/result/submit")
+    @PostMapping("/quiz/result")
     public ResponseEntity<Map<String, String>> submitQuizResult(
             @RequestBody QuizResultSubmitRequest request) {
 
