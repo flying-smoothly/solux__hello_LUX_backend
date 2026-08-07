@@ -4,6 +4,7 @@ import com.eum.hello_lux_quiz.domain.PatientProfile;
 import com.eum.hello_lux_quiz.dto.GeneratedQuizItemDto;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +12,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+@Slf4j
 @Service
 public class QuizGeneratorService {
 
@@ -33,6 +35,7 @@ public class QuizGeneratorService {
                 return new String(is.readAllBytes(), StandardCharsets.UTF_8);
             }
         } catch (Exception e) {
+            log.error("❌ 프롬프트 템플릿 파일 읽기 실패!", e);
             throw new RuntimeException("프롬프트 템플릿 파일을 읽는데 실패했습니다.", e);
         }
     }
@@ -56,7 +59,7 @@ public class QuizGeneratorService {
         String lifeDbStr = lifeDbContext != null ? lifeDbContext : "";
         String timeInstructionStr = timeOrientationInstruction != null ? timeOrientationInstruction : "";
 
-        // 2. {patient_status}, {patient_name}, {personality}, {style}, {life_db_context}, {time_orientation_instruction} 플레이스홀더 치환
+        // 2. 플레이스홀더 치환
         String finalPrompt = promptTemplate
                 .replace("{patient_status}", patientStatus)
                 .replace("{patient_name}", patientNameStr)
@@ -65,18 +68,59 @@ public class QuizGeneratorService {
                 .replace("{life_db_context}", lifeDbStr)
                 .replace("{time_orientation_instruction}", timeInstructionStr);
 
-        // System 역할과 User 요청을 하나로 전달하거나 분리하여 전달
+        // System 역할 지시문
         String systemRole = "당신은 치매 환자를 위한 맞춤형 퀴즈를 출제하는 AI 보조관입니다. 응답은 오직 지정된 JSON 배열로만 출력하세요.";
 
         // 3. OpenAiClient 호출
+        log.info("===> [QuizGeneratorService] LLM API 호출 시작...");
         String jsonResponse = openAiClient.generateQuizJson(systemRole, finalPrompt);
 
-        // 4. JSON 응답 파싱
+        log.info("====================================================");
+        log.info("====> [LLM Raw Response (원문)]");
+        log.info("{}", jsonResponse);
+        log.info("====================================================");
+
+        // 4. 안전한 JSON 응답 파싱
         try {
-            String cleanedJson = jsonResponse.replaceAll("```json", "").replaceAll("```", "").trim();
-            return objectMapper.readValue(cleanedJson, new TypeReference<List<GeneratedQuizItemDto>>() {
+            if (jsonResponse == null || jsonResponse.isBlank()) {
+                throw new IllegalArgumentException("LLM 응답 값이 비어있습니다.");
+            }
+
+            String cleanedJson = jsonResponse.trim();
+
+            // 백틱(```json ... ```) 제거
+            if (cleanedJson.startsWith("```json")) {
+                cleanedJson = cleanedJson.substring(7);
+            } else if (cleanedJson.startsWith("```")) {
+                cleanedJson = cleanedJson.substring(3);
+            }
+            if (cleanedJson.endsWith("```")) {
+                cleanedJson = cleanedJson.substring(0, cleanedJson.length() - 3);
+            }
+
+            cleanedJson = cleanedJson.trim();
+
+            // 대괄호 [ ] 구간만 추출 (앞뒤 텍스트 섞임 방지)
+            int firstJsonChar = cleanedJson.indexOf("[");
+            int lastJsonChar = cleanedJson.lastIndexOf("]");
+
+            if (firstJsonChar != -1 && lastJsonChar != -1 && firstJsonChar < lastJsonChar) {
+                cleanedJson = cleanedJson.substring(firstJsonChar, lastJsonChar + 1);
+            }
+
+            List<GeneratedQuizItemDto> result = objectMapper.readValue(cleanedJson, new TypeReference<List<GeneratedQuizItemDto>>() {
             });
+            log.info("===> [QuizGeneratorService] JSON 파싱 성공! 생성된 문항 수: {}", result.size());
+            return result;
+
         } catch (Exception e) {
+            log.error("====================================================");
+            log.error("❌ [QuizGeneratorService] AI 퀴즈 응답 JSON 파싱 실패!");
+            log.error("====> Raw Response 원문: {}", jsonResponse);
+            log.error("====> 예외 메시지: {}", e.getMessage());
+            log.error("====> 에러 스택트레이스:", e);
+            log.error("====================================================");
+
             throw new RuntimeException("AI 퀴즈 생성 응답 파싱 실패: " + e.getMessage(), e);
         }
     }
