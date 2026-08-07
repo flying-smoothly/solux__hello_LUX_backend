@@ -101,11 +101,17 @@ public class LifeDbService {
         return savedEvent.getEventId();
     }
 
-    // 4. 삶의 DB 수정
+    // 4. 삶의 DB 수정 (pCode 기반 단건 조회)
     @Transactional
     public Integer updateLifeDb(Integer pCode, LifeDbUpdateRequestDto request) {
-        LifeDb lifeDb = lifeDbRepository.findById(request.getMemoryId())
-                .orElseThrow(() -> new IllegalArgumentException("해당 삶의 DB를 찾을 수 없습니다. id=" + request.getMemoryId()));
+        // pCode로 해당 환자의 삶의 DB 단건 조회
+        List<LifeDb> lifeDbList = lifeDbRepository.findByPCode(pCode);
+        if (lifeDbList.isEmpty()) {
+            throw new IllegalArgumentException("해당 환자의 삶의 DB를 찾을 수 없습니다. pCode=" + pCode);
+        }
+
+        // 환자당 1개만 존재하는 LifeDb 추출
+        LifeDb lifeDb = lifeDbList.get(0);
 
         lifeDb.updateInfo(
                 request.getPlace(),
@@ -144,4 +150,3 @@ public class LifeDbService {
         }
     }
 }
-
