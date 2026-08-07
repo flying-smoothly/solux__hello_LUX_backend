@@ -13,10 +13,12 @@ import java.util.List;
 /**
  * quiz_llm 도메인(퀴즈 결과)을 authentication 도메인의 {@link QuizStatsPort} 로 연결하는 어댑터.
  *
- * <p>이 빈이 등록되면 {@code QuizStatsConfig} 의 {@code @ConditionalOnMissingBean} 기본(no-op)
- * 구현은 사용되지 않고, 보호자/의사 대시보드·추이·리포트가 실제 퀴즈 결과 데이터를 사용한다.</p>
+ * <p>
+ * 이 빈이 등록되면 {@code QuizStatsConfig} 의 {@code @ConditionalOnMissingBean}
+ * 기본(no-op) 구현은 사용되지 않고, 보호자/의사 대시보드·추이·리포트가 실제 퀴즈 결과 데이터를 사용한다.</p>
  *
- * <p>점수는 정답 수 기반 백분율(correctCount * 100 / totalCount)로 계산한다.</p>
+ * <p>
+ * 점수는 정답 수 기반 백분율(correctCount * 100 / totalCount)로 계산한다.</p>
  */
 @Component
 @RequiredArgsConstructor
@@ -33,9 +35,11 @@ public class QuizStatsAdapter implements QuizStatsPort {
         return Math.round(r.getCorrectCount() * 100f / r.getTotalCount());
     }
 
-    /** 날짜 오름차순 정렬된 해당 환자의 결과 목록. */
+    /**
+     * 날짜 오름차순 정렬된 해당 환자의 결과 목록.
+     */
     private List<QuizResult> orderedResults(Integer pCode) {
-        return quizResultRepository.findByPCode(pCode).stream()
+        return quizResultRepository.findBypCode(pCode).stream()
                 .sorted(Comparator.comparing(QuizResult::getDate))
                 .toList();
     }
@@ -46,15 +50,18 @@ public class QuizStatsAdapter implements QuizStatsPort {
             return today.minusWeeks(1);
         }
         return switch (period) {
-            case "month" -> today.minusMonths(1);
-            case "year" -> today.minusYears(1);
-            default -> today.minusWeeks(1); // week 및 기타
+            case "month" ->
+                today.minusMonths(1);
+            case "year" ->
+                today.minusYears(1);
+            default ->
+                today.minusWeeks(1); // week 및 기타
         };
     }
 
     private List<QuizResult> resultsInPeriod(Integer pCode, String period) {
         return quizResultRepository
-                .findByPCodeAndDateBetween(pCode, periodStart(period), LocalDate.now())
+                .findBypCodeAndDateBetween(pCode, periodStart(period), LocalDate.now())
                 .stream()
                 .sorted(Comparator.comparing(QuizResult::getDate))
                 .toList();
