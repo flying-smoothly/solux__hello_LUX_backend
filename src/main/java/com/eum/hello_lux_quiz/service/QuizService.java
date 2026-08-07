@@ -140,7 +140,7 @@ public class QuizService {
 
         // ✅ 오늘 날짜로 제출된 QuizResult가 있으면 → 해당 setId의 세트 재사용
         QuizSet savedQuizSet;
-        Optional<QuizResult> todayResult = quizResultRepository.findBypCodeAndDate(pCode, LocalDate.now());
+        Optional<QuizResult> todayResult = quizResultRepository.findByPCodeAndDate(pCode, LocalDate.now());
 
         if (todayResult.isPresent()) {
             // 오늘 이미 결과가 있으면 해당 세트 재사용
@@ -325,7 +325,7 @@ public class QuizService {
     }
 
     public QuizResultResponse getQuizResultByDate(Integer pCode, LocalDate date) {
-        QuizResult quizResult = quizResultRepository.findBypCodeAndDate(pCode, date)
+        QuizResult quizResult = quizResultRepository.findByPCodeAndDate(pCode, date)
                 .orElseThrow(() -> new IllegalArgumentException("해당 날짜의 퀴즈 결과를 찾을 수 없습니다. (pCode: " + pCode + ", date: " + date + ")"));
 
         return QuizResultResponse.from(quizResult, 0);
@@ -360,9 +360,9 @@ public class QuizService {
         List<QuizResult> results;
 
         if (from != null && to != null) {
-            results = quizResultRepository.findBypCodeAndDateBetween(pCode, from, to);
+            results = quizResultRepository.findByPCodeAndDateBetween(pCode, from, to);
         } else {
-            results = quizResultRepository.findBypCode(pCode);
+            results = quizResultRepository.findByPCode(pCode);
         }
 
         List<QuizResultResponse> responseList = new ArrayList<>();

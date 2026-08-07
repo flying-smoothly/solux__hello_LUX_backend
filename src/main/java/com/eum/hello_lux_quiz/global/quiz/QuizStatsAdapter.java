@@ -39,7 +39,7 @@ public class QuizStatsAdapter implements QuizStatsPort {
      * 날짜 오름차순 정렬된 해당 환자의 결과 목록.
      */
     private List<QuizResult> orderedResults(Integer pCode) {
-        return quizResultRepository.findBypCode(pCode).stream()
+        return quizResultRepository.findByPCode(pCode).stream()
                 .sorted(Comparator.comparing(QuizResult::getDate))
                 .toList();
     }
@@ -61,7 +61,7 @@ public class QuizStatsAdapter implements QuizStatsPort {
 
     private List<QuizResult> resultsInPeriod(Integer pCode, String period) {
         return quizResultRepository
-                .findBypCodeAndDateBetween(pCode, periodStart(period), LocalDate.now())
+                .findByPCodeAndDateBetween(pCode, periodStart(period), LocalDate.now())
                 .stream()
                 .sorted(Comparator.comparing(QuizResult::getDate))
                 .toList();

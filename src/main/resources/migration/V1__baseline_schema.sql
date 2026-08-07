@@ -5,7 +5,7 @@
 CREATE TABLE member (
     user_id    VARCHAR(20)  NOT NULL,
     user_pw    VARCHAR(255) NOT NULL,
-    role       ENUM ('DOCTOR','GUARDIAN','PATIENT'),
+    role       VARCHAR(20),
     name       VARCHAR(50)  NOT NULL,
     birth_date DATE         NOT NULL,
     phone      VARCHAR(20),
