@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "삶의DB")
+@Table(name = "삶의db")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class LifeDb {

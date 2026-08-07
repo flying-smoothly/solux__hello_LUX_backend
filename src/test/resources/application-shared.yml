@@ -1,0 +1,45 @@
+# 공유 DB 프로파일 (기본값)
+#
+# Cloudflare Workers 와 같은 MySQL 인스턴스를 바라본다.
+# 백엔드는 여기서 JDBC 로 직접 붙고, Workers 는 Hyperdrive 를 통해 같은 DB 에 붙는다.
+# 어느 쪽이 써도 상대편이 바로 같은 데이터를 본다. (문서: docs/shared-db.md)
+#
+# 접속 정보는 코드에 넣지 않는다. .env 또는 배포 환경변수로 주입할 것. (.env.example 참고)
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+    hikari:
+      pool-name: shared-db-pool
+      # 공유 DB 는 커넥션 수가 전체 팀에서 공유되는 자원이다. 인스턴스당 넉넉히 잡지 말 것.
+      maximum-pool-size: ${DB_POOL_MAX:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:2}
+      connection-timeout: 10000
+      # 관리형 MySQL 은 보통 유휴 커넥션을 끊는다(wait_timeout). 그보다 먼저 우리가 버린다.
+      max-lifetime: 280000
+      idle-timeout: 60000
+      keepalive-time: 60000
+
+  jpa:
+    hibernate:
+      # 공유 DB 에서는 절대 update 를 쓰지 않는다.
+      # 누군가 엔티티를 고치면 남의 테이블까지 말없이 바뀌고 되돌릴 수 없다.
+      # 스키마 변경은 Flyway 마이그레이션으로만 한다.
+      ddl-auto: validate
+    database-platform: org.hibernate.dialect.MySQLDialect
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # ddl-auto: update 로 이미 테이블이 만들어진 기존 DB 를 붙일 때,
+    # V1(= 그 테이블들과 동일한 내용)을 다시 실행하지 않고 적용된 것으로 표시한다.
+    baseline-on-migrate: true
+    baseline-version: 1
+    # 이미 적용된 마이그레이션 파일을 나중에 고치면 부팅을 실패시킨다.
+    # 공동관리에서 가장 위험한 사고(내 로컬만 맞고 공유 DB 는 안 맞는 상태)를 막아준다.
+    validate-on-migrate: true
+    out-of-order: false
