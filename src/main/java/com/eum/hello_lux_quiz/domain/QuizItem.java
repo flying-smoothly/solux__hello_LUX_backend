@@ -3,22 +3,21 @@ package com.eum.hello_lux_quiz.domain;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "퀴즈응시",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"set_id", "quiz_num"}))
+@Table(name = "퀴즈응시")
+@IdClass(QuizItemId.class) // 👈 1번에서 만든 복합키 클래스 지정
 public class QuizItem {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "quiz_id")
-    private Integer quizId;
 
+    @Id // 👈 복합키 1
+    @Column(name = "quiz_num", nullable = false)
+    private Integer quizNum;
+
+    @Id // 👈 복합키 2
     @Column(name = "set_id", nullable = false)
     private Integer setId;
 
+    @Id // 👈 복합키 3
     @Column(name = "p_code", nullable = false)
     private Integer pCode;
-
-    @Column(name = "quiz_num", nullable = false)
-    private Integer quizNum;
 
     @Column(name = "score")
     private Integer score = 0;
@@ -39,21 +38,21 @@ public class QuizItem {
     private String answer;
 
     @Column(name = "options", columnDefinition = "TEXT")
-    private String options; // 객관식 보기 컬럼
+    private String options;
 
     @Column(name = "hints", columnDefinition = "TEXT")
-    private String hints; // 힌트 컬럼 추가 
+    private String hints;
 
-    // JPA용 기본 생성자
+    // JPA 규약용 기본 생성자
     protected QuizItem() {
     }
 
-    // 기존 생성자 (호환용이 필요할 경우 남겨둠)
+    // 기존 생성자 (호환용)
     public QuizItem(Integer setId, Integer pCode, Integer quizNum, String quizCategory, Integer level, String quizComment, String quizPhoto, String answer, String options) {
         this(setId, pCode, quizNum, quizCategory, level, quizComment, quizPhoto, answer, options, null);
     }
 
-    // 힌트 포함 수동 생성자
+    // 힌트 포함 생성자 (QuizService에서 사용)
     public QuizItem(Integer setId, Integer pCode, Integer quizNum, String quizCategory, Integer level, String quizComment, String quizPhoto, String answer, String options, String hints) {
         this.setId = setId;
         this.pCode = pCode;
@@ -68,11 +67,7 @@ public class QuizItem {
         this.score = 0;
     }
 
-    // --- 수동 Getter ---
-    public Integer getQuizId() {
-        return quizId;
-    }
-
+    // --- Getter ---
     public Integer getSetId() {
         return setId;
     }
@@ -82,7 +77,7 @@ public class QuizItem {
     }
 
     public Integer getpCode() {
-        return pCode; // Lombok 네이밍 호환용
+        return pCode;
     }
 
     public Integer getQuizNum() {

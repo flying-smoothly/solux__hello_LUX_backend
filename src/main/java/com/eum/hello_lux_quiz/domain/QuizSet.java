@@ -59,7 +59,7 @@ public class QuizSet {
         return setId;
     }
 
-    public Integer getPCode() { // Long -> Integer 변경
+    public Integer getpCode() { // Long -> Integer 변경
         return pCode;
     }
 
