@@ -5,15 +5,15 @@
 
 spring:
   datasource:
-    driver-class-name: ${DB_DRIVER:com.mysql.cj.jdbc.Driver}
-    url: ${DB_URL:jdbc:mysql://localhost:3306/eum_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&connectionTimeZone=Asia/Seoul}
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:}
+    driver-class-name: ${LOCAL_DB_DRIVER:com.mysql.cj.jdbc.Driver}
+    url: ${LOCAL_DB_URL:jdbc:mysql://localhost:3306/eum_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&connectionTimeZone=Asia/Seoul}
+    username: ${LOCAL_DB_USERNAME:root}
+    password: ${LOCAL_DB_PASSWORD:}
 
   jpa:
     hibernate:
-      ddl-auto: ${JPA_DDL_AUTO:update}
-    database-platform: ${JPA_DIALECT:org.hibernate.dialect.MySQLDialect}
+      ddl-auto: ${LOCAL_JPA_DDL_AUTO:update}
+    database-platform: ${LOCAL_JPA_DIALECT:org.hibernate.dialect.MySQLDialect}
 
   # 로컬은 ddl-auto 로 스키마를 만들므로 Flyway 를 끈다.
   # 마이그레이션을 검증하고 싶으면 빈 DB 에 SPRING_PROFILES_ACTIVE=shared 로 붙여보면 된다.
