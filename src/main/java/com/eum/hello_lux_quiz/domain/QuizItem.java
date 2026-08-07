@@ -1,22 +1,25 @@
 package com.eum.hello_lux_quiz.domain;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "퀴즈응시")
-@IdClass(QuizItemId.class) // 👈 1번에서 만든 복합키 클래스 지정
+@IdClass(QuizItemId.class)
 public class QuizItem {
 
-    @Id // 👈 복합키 1
+    @Id
     @Column(name = "quiz_num", nullable = false)
     private Integer quizNum;
 
-    @Id // 👈 복합키 2
+    @Id
     @Column(name = "set_id", nullable = false)
+    @JsonProperty("set_id") //  JSON Key 이름을 "set_id"로 지정
     private Integer setId;
 
-    @Id // 👈 복합키 3
+    @Id
     @Column(name = "p_code", nullable = false)
+    @JsonProperty("p_code") //  JSON Key 이름을 "p_code"로 명시적 지정
     private Integer pCode;
 
     @Column(name = "score")
@@ -43,16 +46,13 @@ public class QuizItem {
     @Column(name = "hints", columnDefinition = "TEXT")
     private String hints;
 
-    // JPA 규약용 기본 생성자
     protected QuizItem() {
     }
 
-    // 기존 생성자 (호환용)
     public QuizItem(Integer setId, Integer pCode, Integer quizNum, String quizCategory, Integer level, String quizComment, String quizPhoto, String answer, String options) {
         this(setId, pCode, quizNum, quizCategory, level, quizComment, quizPhoto, answer, options, null);
     }
 
-    // 힌트 포함 생성자 (QuizService에서 사용)
     public QuizItem(Integer setId, Integer pCode, Integer quizNum, String quizCategory, Integer level, String quizComment, String quizPhoto, String answer, String options, String hints) {
         this.setId = setId;
         this.pCode = pCode;
@@ -72,10 +72,7 @@ public class QuizItem {
         return setId;
     }
 
-    public Integer getPCode() {
-        return pCode;
-    }
-
+    // Getter를 하나만 남깁니다. (@JsonProperty 덕분에 "p_code"로 변환됩니다)
     public Integer getpCode() {
         return pCode;
     }
