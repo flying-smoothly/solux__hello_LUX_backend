@@ -1,9 +1,14 @@
 package com.eum.hello_lux_quiz.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class QuizResultSubmitRequest {
 
     private Integer setId;
+
+    @JsonProperty("p_code")
     private Integer pCode;
+
     private Integer totalCount;
     private Integer correctCount;
     private Integer hint;
@@ -90,7 +95,7 @@ public class QuizResultSubmitRequest {
         this.feedbackContent = feedbackContent;
     }
 
-     public Integer getSuccessRate() {
+    public Integer getSuccessRate() {
         return successRate;
     }
 
