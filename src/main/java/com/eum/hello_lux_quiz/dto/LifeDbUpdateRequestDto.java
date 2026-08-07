@@ -8,9 +8,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class LifeDbUpdateRequestDto {
 
-    @JsonProperty("memory_id")
-    private Integer memoryId;
-
     private String family;
     private String hometown;
     private String job;
