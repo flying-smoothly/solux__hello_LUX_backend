@@ -67,8 +67,10 @@
   * Level 3 (유형 3: 텍스트 단답형): "text"
 
 - quiz_photo 규칙:
-  * Level 2 (photo): {life_db_context}에 존재하는 실제 이미지 URL 문자열 그대로 입력.
+  * Level 2 (photo): {life_db_context} 하단의 [사용 가능한 이미지 URL 화이트리스트]에 있는 문자열 중 하나를 그대로 입력. 화이트리스트에 없는 URL은 절대 사용 금지.
   * Level 1 (choice) 및 Level 3 (text): 반드시 null 입력.
+  * ⚠️ 화이트리스트가 "(없음)"인 경우: quiz_category 에 "photo" 를 사용하지 말고, 유형 2에 배정된 문항도 모두 "text"(단답형)로 출제하며 quiz_photo 는 null 로 두세요.
+  * "없음", "N/A", 빈 문자열 같은 placeholder 문자열을 quiz_photo 에 넣지 마세요. 사진이 없으면 JSON null 입니다.
 
 - options 규칙:
   * Level 1 (객관식): 반드시 정답을 포함한 서로 다른 4개의 보기 항목(문자열)을 배열 형태로 생성하세요. (예: ["돈까스", "김치찌개", "비빔밥", "국밥"])
