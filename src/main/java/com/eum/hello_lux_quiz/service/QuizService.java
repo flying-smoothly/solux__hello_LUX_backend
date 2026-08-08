@@ -156,7 +156,16 @@ public class QuizService {
     }
 
     /**
-     * 사진 URL 정규화. 공백 문자열이나 LLM이 넣는 "없음"/"null" 같은 placeholder 는 null 로 바꾼다.
+     * 사진 URL 정규화.
+     *
+     * <p>다음은 모두 "사진 없음"(null)으로 취급한다.
+     * <ul>
+     *   <li>공백 문자열</li>
+     *   <li>"없음"/"null" 같은 placeholder</li>
+     *   <li>절대 URL이 아닌 값 — 예: R2_PUBLIC_URL 미설정 시 저장된 "/patients/1/xxx.jpg".
+     *       브라우저가 프론트엔드 origin(localhost:5173) 기준으로 해석해 404가 나므로
+     *       사진이 있는 것처럼 내려보내면 안 된다.</li>
+     * </ul>
      */
     private String normalizePhotoUrl(String photoUrl) {
         if (photoUrl == null) {
@@ -169,7 +178,20 @@ public class QuizService {
         if (BLANK_PHOTO_TOKENS.contains(trimmed.toLowerCase(Locale.ROOT))) {
             return null;
         }
+        if (!isAbsoluteHttpUrl(trimmed)) {
+            log.warn("===> [normalizePhotoUrl] 절대 URL이 아니라 사용할 수 없는 사진 주소입니다. "
+                    + "R2_PUBLIC_URL 설정을 확인하세요. (값: {})", trimmed);
+            return null;
+        }
         return trimmed;
+    }
+
+    /**
+     * 브라우저가 그대로 로드할 수 있는 절대 http(s) URL 인지 확인한다.
+     */
+    private boolean isAbsoluteHttpUrl(String url) {
+        String lower = url.toLowerCase(Locale.ROOT);
+        return lower.startsWith("http://") || lower.startsWith("https://");
     }
 
     /**
