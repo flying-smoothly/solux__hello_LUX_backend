@@ -1,0 +1,21 @@
+# 로컬 전용 프로파일 — 각자 PC 의 MySQL 을 본다. 공유 DB 와 연결되지 않는다.
+#
+# 이 프로파일에서 만든 데이터는 나만 보인다. 팀과 같은 데이터를 봐야 하면 shared 를 쓸 것.
+# 실행: SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
+
+spring:
+  datasource:
+    driver-class-name: ${LOCAL_DB_DRIVER:com.mysql.cj.jdbc.Driver}
+    url: ${LOCAL_DB_URL:jdbc:mysql://localhost:3306/eum_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&connectionTimeZone=Asia/Seoul}
+    username: ${LOCAL_DB_USERNAME:root}
+    password: ${LOCAL_DB_PASSWORD:}
+
+  jpa:
+    hibernate:
+      ddl-auto: ${LOCAL_JPA_DDL_AUTO:update}
+    database-platform: ${LOCAL_JPA_DIALECT:org.hibernate.dialect.MySQLDialect}
+
+  # 로컬은 ddl-auto 로 스키마를 만들므로 Flyway 를 끈다.
+  # 마이그레이션을 검증하고 싶으면 빈 DB 에 SPRING_PROFILES_ACTIVE=shared 로 붙여보면 된다.
+  flyway:
+    enabled: false
