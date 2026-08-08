@@ -14,10 +14,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.Optional;
 
@@ -25,16 +22,6 @@ import java.util.Optional;
 @Service
 @Transactional(readOnly = true)
 public class QuizService {
-
-    /** 사진 기반 퀴즈 유형 코드 (prompt.txt의 quiz_category 규칙과 동일) */
-    private static final String CATEGORY_PHOTO = "photo";
-    /** 사진이 없을 때 강등시킬 유형 코드 */
-    private static final String CATEGORY_TEXT = "text";
-
-    /** LLM이 "URL 없음"을 표현할 때 흔히 넣는 값들 (실제 URL이 아니므로 null 취급) */
-    private static final Set<String> BLANK_PHOTO_TOKENS = Set.of(
-            "없음", "null", "none", "n/a", "na", "-", "미제공", "no image", "없습니다"
-    );
 
     private final QuizSetRepository quizSetRepository;
     private final QuizItemRepository quizItemRepository;
@@ -71,6 +58,10 @@ public class QuizService {
 
     /**
      * DB에서 삶의DB + 세분화(랜덤 3개) 정보를 조회하여 Context 문자열을 생성하는 메서드
+     *
+     * [수정] LLM이 사진 URL을 직접 베끼다가 가짜 URL(example.com 등)을 만들어내는 문제를 막기 위해, 실제 URL
+     * 문자열 대신 [사진ID: N] 참조번호만 컨텍스트에 노출한다. 실제 URL은 LLM이 반환한 photoId로 서버가 DB에서 직접
+     * 조회해서 매핑한다 (createQuizSet 참고).
      */
     public String buildLifeDbContext(Integer pCode) {
         List<LifeDb> lifeDbList = lifeDbRepository.findByPCode(pCode);
@@ -81,9 +72,6 @@ public class QuizService {
 
         StringBuilder contextBuilder = new StringBuilder();
         contextBuilder.append("=== 환자 회상 정보 (삶의DB 및 세분화 사건) ===\n");
-
-        // 사진 퀴즈에 실제로 사용할 수 있는 URL 목록 (프롬프트 하단에 화이트리스트로 첨부)
-        Set<String> availablePhotoUrls = new LinkedHashSet<>();
 
         for (LifeDb memory : lifeDbList) {
             String formattedFamily = formatFamilyInfo(memory.getFamily());
@@ -103,115 +91,100 @@ public class QuizService {
             // 세분화(DetailEvent) 데이터 조회 후 셔플 -> 최대 3개 선택
             List<DetailEvent> detailList = detailRepository.findByMemoryId(memory.getMemoryId());
             if (detailList != null && !detailList.isEmpty()) {
-                // 사진이 있는 사건을 먼저 배치한다.
-                // 단순 셔플 후 3개만 자르면 사진 있는 사건이 통째로 탈락해서
-                // LLM에게 넘길 이미지 URL이 하나도 없는 상황(= 사진 퀴즈 이미지 깨짐)이 발생한다.
-                List<DetailEvent> withPhoto = new ArrayList<>();
-                List<DetailEvent> withoutPhoto = new ArrayList<>();
-                for (DetailEvent detail : detailList) {
-                    if (normalizePhotoUrl(detail.getPhotoUrl()) != null) {
-                        withPhoto.add(detail);
-                    } else {
-                        withoutPhoto.add(detail);
-                    }
-                }
-                Collections.shuffle(withPhoto);
-                Collections.shuffle(withoutPhoto);
+                List<DetailEvent> shuffledList = new ArrayList<>(detailList);
+                Collections.shuffle(shuffledList);
+                List<DetailEvent> selectedDetails = shuffledList.stream().limit(3).toList();
 
-                List<DetailEvent> selectedDetails = new ArrayList<>(withPhoto);
-                selectedDetails.addAll(withoutPhoto);
-                selectedDetails = selectedDetails.stream().limit(3).toList();
-
-                contextBuilder.append("  [연관 세부 사건 (사진 보유 사건 우선, 최대 3개)]\n");
+                contextBuilder.append("  [연관 세부 사건 (랜덤 3개)]\n");
                 for (DetailEvent detail : selectedDetails) {
-                    String photoUrl = normalizePhotoUrl(detail.getPhotoUrl());
-                    if (photoUrl != null) {
-                        availablePhotoUrls.add(photoUrl);
+                    boolean hasPhoto = detail.getPhotoUrl() != null && !detail.getPhotoUrl().isBlank();
+                    if (hasPhoto) {
+                        // ✅ URL 대신 사진ID(참조번호)만 노출 → LLM이 URL을 직접 베끼거나 지어낼 여지 차단
+                        contextBuilder.append(String.format("  * [사진ID: %d] 내용: %s / 사진: 있음 / 감정: %s\n",
+                                detail.getEventId(),
+                                detail.getEvent(),
+                                detail.getCategory()
+                        ));
+                    } else {
+                        contextBuilder.append(String.format("  * 내용: %s / 사진: 없음 / 감정: %s\n",
+                                detail.getEvent(),
+                                detail.getCategory()
+                        ));
                     }
-                    contextBuilder.append(String.format("  * 내용: %s / 사진URL: %s / 감정: %s\n",
-                            detail.getEvent(),
-                            photoUrl != null ? photoUrl : "없음",
-                            detail.getCategory()
-                    ));
                 }
             }
             contextBuilder.append("-----------------------\n");
-        }
-
-        // LLM이 URL을 지어내지 못하도록, 사용 가능한 URL을 명시적인 화이트리스트로 다시 알려준다.
-        contextBuilder.append("\n[사용 가능한 이미지 URL 화이트리스트]\n");
-        if (availablePhotoUrls.isEmpty()) {
-            contextBuilder.append("- (없음) 이 환자는 등록된 사진이 없습니다. "
-                    + "quiz_photo 는 모든 문항에서 반드시 null 이어야 하고, "
-                    + "quiz_category 에 \"photo\" 를 사용해서는 안 됩니다.\n");
-        } else {
-            for (String url : availablePhotoUrls) {
-                contextBuilder.append("- ").append(url).append('\n');
-            }
-            contextBuilder.append("※ quiz_photo 값은 위 목록의 문자열 중 하나와 완전히 일치해야 합니다. "
-                    + "목록에 없는 URL은 절대 사용하지 마세요.\n");
         }
 
         return contextBuilder.toString();
     }
 
     /**
-     * 사진 URL 정규화.
-     *
-     * <p>다음은 모두 "사진 없음"(null)으로 취급한다.
-     * <ul>
-     *   <li>공백 문자열</li>
-     *   <li>"없음"/"null" 같은 placeholder</li>
-     *   <li>절대 URL이 아닌 값 — 예: R2_PUBLIC_URL 미설정 시 저장된 "/patients/1/xxx.jpg".
-     *       브라우저가 프론트엔드 origin(localhost:5173) 기준으로 해석해 404가 나므로
-     *       사진이 있는 것처럼 내려보내면 안 된다.</li>
-     * </ul>
+     * 컨텍스트 문자열 안에 실제로 사용 가능한 사진(사진ID) 개수를 센다. lifeDbContext가 외부(컨트롤러 등)에서 미리
+     * 만들어져 전달된 경우에도 동일하게 카운트할 수 있도록 문자열 마커([사진ID:) 기반으로 계산한다.
      */
-    private String normalizePhotoUrl(String photoUrl) {
-        if (photoUrl == null) {
-            return null;
+    private int countAvailablePhotos(String context) {
+        if (context == null || context.isBlank()) {
+            return 0;
         }
-        String trimmed = photoUrl.trim();
-        if (trimmed.isEmpty()) {
-            return null;
+        int count = 0;
+        int idx = 0;
+        while ((idx = context.indexOf("[사진ID:", idx)) != -1) {
+            count++;
+            idx += 6;
         }
-        if (BLANK_PHOTO_TOKENS.contains(trimmed.toLowerCase(Locale.ROOT))) {
-            return null;
-        }
-        if (!isAbsoluteHttpUrl(trimmed)) {
-            log.warn("===> [normalizePhotoUrl] 절대 URL이 아니라 사용할 수 없는 사진 주소입니다. "
-                    + "R2_PUBLIC_URL 설정을 확인하세요. (값: {})", trimmed);
-            return null;
-        }
-        return trimmed;
+        return count;
     }
 
     /**
-     * 브라우저가 그대로 로드할 수 있는 절대 http(s) URL 인지 확인한다.
+     * patient_status별로 요구되는 유형2(사진선택형) 문항 개수
      */
-    private boolean isAbsoluteHttpUrl(String url) {
-        String lower = url.toLowerCase(Locale.ROOT);
-        return lower.startsWith("http://") || lower.startsWith("https://");
+    private int requiredPhotoCountFor(String patientStatus) {
+        if (patientStatus == null) {
+            return 2;
+        }
+        return switch (patientStatus) {
+            case "주의" ->
+                4;
+            case "위험" ->
+                0;
+            default ->
+                2; // 유지
+        };
     }
 
     /**
-     * 이 환자가 실제로 보유한 사진 URL 집합. LLM 응답 검증용 화이트리스트로 사용한다.
+     * 사진 후보 개수가 부족할 때, LLM에게 유형2 비중을 줄이고 유형1/유형3으로 대체하라고 지시하는 문구를 생성한다. 사진이
+     * 충분하면 빈 문자열을 반환한다.
      */
-    private Set<String> collectPatientPhotoUrls(Integer pCode) {
-        Set<String> urls = new LinkedHashSet<>();
-        for (LifeDb memory : lifeDbRepository.findByPCode(pCode)) {
-            List<DetailEvent> detailList = detailRepository.findByMemoryId(memory.getMemoryId());
-            if (detailList == null) {
-                continue;
-            }
-            for (DetailEvent detail : detailList) {
-                String url = normalizePhotoUrl(detail.getPhotoUrl());
-                if (url != null) {
-                    urls.add(url);
-                }
-            }
+    private String buildPhotoAvailabilityInstruction(String patientStatus, int availablePhotoCount) {
+        int requiredPhotoCount = requiredPhotoCountFor(patientStatus);
+        if (availablePhotoCount >= requiredPhotoCount) {
+            return "";
         }
-        return urls;
+        int fallbackCount = requiredPhotoCount - availablePhotoCount;
+        return String.format(
+                "★ [사진 부족 예외 처리]: 현재 사용 가능한 사진(사진ID)이 %d개뿐입니다. "
+                + "유형2(사진선택형)는 최대 %d개까지만 출제하고, 부족한 %d개는 유형1(객관식) 또는 유형3(단답형)으로 대체하여 "
+                + "총 7문항 구성을 유지하세요. 사진ID가 없는 문항에는 quiz_photo를 반드시 null로 설정하세요.",
+                availablePhotoCount, availablePhotoCount, fallbackCount
+        );
+    }
+
+    /**
+     * LLM이 반환한 quiz_photo 값(사진ID 문자열)을 안전하게 정수로 파싱한다. URL이나 이상한 문자열이 들어와도 예외 없이
+     * null을 반환한다 (LLM이 지시를 어긴 경우에 대한 안전장치).
+     */
+    private Integer tryParsePhotoId(String raw) {
+        if (raw == null || raw.isBlank() || "null".equalsIgnoreCase(raw.trim())) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(raw.trim());
+        } catch (NumberFormatException e) {
+            log.warn("===> [tryParsePhotoId] quiz_photo 값이 유효한 사진ID(정수)가 아님: {}", raw);
+            return null;
+        }
     }
 
     // JSON [family] 텍스트를 읽기 편한 "이름(호칭)" 문자열로 변환하는 헬퍼 메서드
@@ -248,7 +221,7 @@ public class QuizService {
 
         // ✅ 오늘 날짜로 제출된 QuizResult가 있으면 → 해당 setId의 세트 재사용
         QuizSet savedQuizSet;
-        Optional<QuizResult> todayResult = quizResultRepository.findByPCodeAndDate(pCode, LocalDate.now());
+        Optional<QuizResult> todayResult = quizResultRepository.findBypCodeAndDate(pCode, LocalDate.now());
 
         if (todayResult.isPresent()) {
             // 오늘 이미 결과가 있으면 해당 세트 재사용
@@ -273,20 +246,10 @@ public class QuizService {
 
             dto.setQuizNum(item.getQuizNum());
             dto.setLevel(item.getLevel());
+            dto.setQuizCategory(item.getQuizCategory());
             dto.setQuizComment(item.getQuizComment());
+            dto.setQuizPhoto(item.getQuizPhoto());
             dto.setAnswer(item.getAnswer());
-
-            // 이미 저장된 세트에도 "없음"/빈 문자열 같은 값이 남아 있을 수 있다.
-            // 그대로 내려보내면 프론트에서 <img src=""> 로 렌더링되어 깨진 이미지가 보인다.
-            String storedPhoto = normalizePhotoUrl(item.getQuizPhoto());
-            String storedCategory = item.getQuizCategory();
-            if (CATEGORY_PHOTO.equalsIgnoreCase(storedCategory) && storedPhoto == null) {
-                log.warn("===> [getOrCreateTodayQuiz] setId: {}, quizNum: {} 사진이 없는 photo 문항입니다. text 로 내려보냅니다.",
-                        savedQuizSet.getSetId(), item.getQuizNum());
-                storedCategory = CATEGORY_TEXT;
-            }
-            dto.setQuizCategory(storedCategory);
-            dto.setQuizPhoto(storedPhoto);
 
             if (item.getOptions() != null && !item.getOptions().isBlank()) {
                 dto.setOptions(List.of(item.getOptions().split(",\\s*")));
@@ -389,40 +352,45 @@ public class QuizService {
             String todayContext = String.format("\n[현재 기준 날짜 정보: 오늘은 %d년 %d월입니다. 퀴즈 정답 생성 시 이 날짜 정보를 참고하세요.]",
                     today.getYear(), today.getMonthValue());
 
+            // ✅ [사진 부족 예외 처리] 사용 가능한 사진(사진ID) 개수를 세어, 부족하면 유형2 비중을 낮추도록 지시문 생성
+            int availablePhotoCount = countAvailablePhotos(finalContext);
+            String photoAvailabilityInstruction = buildPhotoAvailabilityInstruction(patientStatus, availablePhotoCount);
+            log.info("===> [createQuizSet] 사용 가능한 사진 개수: {}, 사진 부족 지시문 적용 여부: {}",
+                    availablePhotoCount, !photoAvailabilityInstruction.isBlank());
+
             log.info("===> [QuizGeneratorService 호출 시작] patientStatus: {}", patientStatus);
 
             // LLM 퀴즈 생성 호출
             List<GeneratedQuizItemDto> generatedItems = quizGeneratorService.generateQuizSet(
-                    patientStatus, profile, finalContext + todayContext, timeOrientationInstruction
+                    patientStatus, profile, finalContext + todayContext, timeOrientationInstruction, photoAvailabilityInstruction
             );
 
             log.info("===> [LLM 응답 받아옴] 생성된 문항 개수: {}", generatedItems != null ? generatedItems.size() : 0);
-
-            // 이 환자가 실제로 보유한 사진 URL (LLM 응답 검증용)
-            Set<String> allowedPhotoUrls = collectPatientPhotoUrls(pCode);
-
-            // 대체가 필요할 때는 프롬프트에 실제로 실린 사진을 우선한다.
-            // (LLM이 못 본 사진으로 바꾸면 지문과 사진이 어긋난다)
-            Set<String> contextPhotoUrls = allowedPhotoUrls.stream()
-                    .filter(finalContext::contains)
-                    .collect(Collectors.toCollection(LinkedHashSet::new));
-            Set<String> fallbackPhotoUrls = contextPhotoUrls.isEmpty() ? allowedPhotoUrls : contextPhotoUrls;
-
-            log.info("===> [createQuizSet] pCode: {} 보유 사진 URL: {}개 (프롬프트 포함: {}개)",
-                    pCode, allowedPhotoUrls.size(), contextPhotoUrls.size());
 
             // [보완] LLM 응답의 Null Pointer 방어
             if (generatedItems != null) {
                 int quizNumCounter = 1;
                 for (GeneratedQuizItemDto dto : generatedItems) {
-                    String category = (dto.getQuizCategory() != null) ? dto.getQuizCategory() : CATEGORY_TEXT;
-                    String photoUrl = resolveQuizPhoto(
-                            dto.getQuizPhoto(), category, allowedPhotoUrls, fallbackPhotoUrls, quizNumCounter);
+                    String category = (dto.getQuizCategory() != null) ? dto.getQuizCategory() : "text";
 
-                    // 사진 없는 "photo" 문항은 프론트에서 깨진 이미지로 보이므로 text 로 강등한다.
-                    if (CATEGORY_PHOTO.equalsIgnoreCase(category) && photoUrl == null) {
-                        log.warn("===> [createQuizSet] quizNum: {} 사진 URL이 없어 photo -> text 로 강등합니다.", quizNumCounter);
-                        category = CATEGORY_TEXT;
+                    // ✅ [안전장치] quiz_photo는 이제 URL이 아니라 사진ID(정수)로 받는다.
+                    // LLM이 지시를 어기고 URL이나 이상한 값을 반환하더라도, 여기서 안전하게 걸러내고
+                    // 실제 URL은 서버가 DB에서 직접 조회해서 채운다. 유효하지 않으면 text로 강제 전환한다.
+                    String resolvedPhotoUrl = null;
+                    if ("photo".equals(category)) {
+                        Integer photoId = tryParsePhotoId(dto.getQuizPhoto());
+                        if (photoId != null) {
+                            resolvedPhotoUrl = detailRepository.findById(photoId)
+                                    .map(DetailEvent::getPhotoUrl)
+                                    .filter(url -> url != null && !url.isBlank())
+                                    .orElse(null);
+                        }
+
+                        if (resolvedPhotoUrl == null) {
+                            log.warn("===> [createQuizSet] 유효하지 않은 사진ID({}) 감지 → 해당 문항을 text 유형으로 강제 전환",
+                                    dto.getQuizPhoto());
+                            category = "text";
+                        }
                     }
 
                     String optionsString = (dto.getOptions() != null && !dto.getOptions().isEmpty())
@@ -440,7 +408,7 @@ public class QuizService {
                             category,
                             dto.getLevel(),
                             dto.getQuizComment(),
-                            photoUrl,
+                            resolvedPhotoUrl,
                             dto.getAnswer(),
                             optionsString,
                             hintsString
@@ -463,45 +431,8 @@ public class QuizService {
         }
     }
 
-    /**
-     * LLM이 반환한 quiz_photo 를 검증한다.
-     *
-     * <p>프롬프트로 "실제 URL만 복사하라"고 지시해도 LLM은 종종 URL을 지어내거나
-     * ("https://example.com/..."), "없음" 같은 문자열을 넣는다. 그대로 저장하면
-     * 프론트에서 이미지가 깨진 채로 노출되므로 화이트리스트로 한번 더 거른다.
-     *
-     * @param allowedPhotoUrls  환자가 보유한 전체 사진 URL (통과 기준)
-     * @param fallbackPhotoUrls 대체가 필요할 때 고를 후보 (프롬프트에 실린 사진 우선)
-     * @return 저장해도 되는 URL, 사용할 수 없으면 null
-     */
-    private String resolveQuizPhoto(String rawPhotoUrl, String category,
-            Set<String> allowedPhotoUrls, Set<String> fallbackPhotoUrls, int quizNum) {
-        String photoUrl = normalizePhotoUrl(rawPhotoUrl);
-
-        // 사진 퀴즈가 아니면 URL을 붙이지 않는다.
-        if (!CATEGORY_PHOTO.equalsIgnoreCase(category)) {
-            return null;
-        }
-
-        if (photoUrl != null && allowedPhotoUrls.contains(photoUrl)) {
-            return photoUrl;
-        }
-
-        if (fallbackPhotoUrls.isEmpty()) {
-            log.warn("===> [resolveQuizPhoto] quizNum: {} 환자에게 등록된 사진이 없습니다. quiz_photo 를 비웁니다. (LLM 응답: {})",
-                    quizNum, rawPhotoUrl);
-            return null;
-        }
-
-        // LLM이 지어낸 URL -> 환자의 실제 사진 중 하나로 대체한다.
-        String fallback = fallbackPhotoUrls.iterator().next();
-        log.warn("===> [resolveQuizPhoto] quizNum: {} LLM이 허용되지 않은 URL을 반환했습니다. 실제 사진으로 대체합니다. (응답: {} -> 대체: {})",
-                quizNum, rawPhotoUrl, fallback);
-        return fallback;
-    }
-
     public QuizResultResponse getQuizResultByDate(Integer pCode, LocalDate date) {
-        QuizResult quizResult = quizResultRepository.findByPCodeAndDate(pCode, date)
+        QuizResult quizResult = quizResultRepository.findBypCodeAndDate(pCode, date)
                 .orElseThrow(() -> new IllegalArgumentException("해당 날짜의 퀴즈 결과를 찾을 수 없습니다. (pCode: " + pCode + ", date: " + date + ")"));
 
         return QuizResultResponse.from(quizResult, 0);
@@ -536,9 +467,9 @@ public class QuizService {
         List<QuizResult> results;
 
         if (from != null && to != null) {
-            results = quizResultRepository.findByPCodeAndDateBetween(pCode, from, to);
+            results = quizResultRepository.findBypCodeAndDateBetween(pCode, from, to);
         } else {
-            results = quizResultRepository.findByPCode(pCode);
+            results = quizResultRepository.findBypCode(pCode);
         }
 
         List<QuizResultResponse> responseList = new ArrayList<>();

@@ -3,7 +3,6 @@ package com.eum.hello_lux_quiz.service;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -132,9 +131,7 @@ public class LifeDbService {
             throw new IllegalArgumentException("업로드할 파일이 비어있습니다.");
         }
 
-        // 원본 파일명(한글/공백 포함 가능)을 그대로 key 로 쓰면 URL 인코딩 불일치로 이미지가 깨진다.
-        // 확장자만 남기고 UUID 로 대체한다.
-        String storeFileName = "patients/" + pCode + "/" + UUID.randomUUID() + extractExtension(file.getOriginalFilename());
+        String storeFileName = "patients/" + pCode + "/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
 
         try {
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
@@ -146,53 +143,19 @@ public class LifeDbService {
             s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
 
             // 저장된 이미지의 접근 가능한 URL 반환
-            return buildPublicUrl(storeFileName);
+            return publicUrl + "/" + storeFileName;
 
         } catch (IOException e) {
             throw new RuntimeException("R2 파일 업로드 중 오류가 발생했습니다.", e);
         }
     }
 
-    /**
-     * 원본 파일명에서 URL 에 안전한 확장자만 추출한다. (예: "가족 사진.JPG" -> ".jpg")
-     * 확장자가 없거나 이상하면 빈 문자열을 반환한다.
-     */
-    private String extractExtension(String originalFilename) {
-        if (originalFilename == null) {
-            return "";
-        }
-        int dotIndex = originalFilename.lastIndexOf('.');
-        if (dotIndex < 0 || dotIndex == originalFilename.length() - 1) {
-            return "";
-        }
-        String extension = originalFilename.substring(dotIndex + 1).toLowerCase(Locale.ROOT);
-        if (!extension.matches("[a-z0-9]{1,10}")) {
-            return "";
-        }
-        return "." + extension;
-    }
+    @Transactional
+    public void updateEventPhotoUrl(Integer eventId, String photoUrl) {
+        int updatedRows = detailRepository.updatePhotoUrlByEventId(eventId, photoUrl);
 
-    /**
-     * 업로드된 오브젝트의 공개 URL 조립.
-     *
-     * <p>R2_PUBLIC_URL 이 비어 있으면 "/patients/1/xxx.jpg" 같은 상대 경로가 만들어지고,
-     * 프론트엔드는 이를 자기 origin(예: localhost:5173) 기준으로 해석해 404 가 난다.
-     * 사진이 안 뜨는 원인이 되므로, 설정 누락은 업로드 시점에 바로 실패시킨다.
-     */
-    private String buildPublicUrl(String objectKey) {
-        if (publicUrl == null || publicUrl.isBlank()) {
-            throw new IllegalStateException(
-                    "R2 공개 URL 설정(cloudflare.r2.public-url / 환경변수 R2_PUBLIC_URL)이 비어 있습니다. "
-                    + "설정하지 않으면 저장되는 사진 주소가 상대 경로가 되어 퀴즈에서 이미지가 표시되지 않습니다.");
+        if (updatedRows == 0) {
+            throw new IllegalArgumentException("존재하지 않는 event_id 입니다: " + eventId);
         }
-
-        // 설정값 끝의 '/' 와 key 앞의 '/' 가 겹쳐 '//' 가 되는 것을 방지
-        String base = publicUrl.trim();
-        while (base.endsWith("/")) {
-            base = base.substring(0, base.length() - 1);
-        }
-        String key = objectKey.startsWith("/") ? objectKey.substring(1) : objectKey;
-
-        return base + "/" + key;
     }
 }

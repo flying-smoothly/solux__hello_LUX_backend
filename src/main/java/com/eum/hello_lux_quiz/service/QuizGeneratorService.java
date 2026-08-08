@@ -47,7 +47,8 @@ public class QuizGeneratorService {
             String patientStatus,
             PatientProfile profile,
             String lifeDbContext,
-            String timeOrientationInstruction) {
+            String timeOrientationInstruction,
+            String photoAvailabilityInstruction) {
 
         // 1. prompt.txt 파일 불러오기
         String promptTemplate = loadPromptTemplate();
@@ -58,6 +59,8 @@ public class QuizGeneratorService {
         String styleStr = profile.getStyle() != null ? profile.getStyle() : "";
         String lifeDbStr = lifeDbContext != null ? lifeDbContext : "";
         String timeInstructionStr = timeOrientationInstruction != null ? timeOrientationInstruction : "";
+        // ✅ 사진 후보 부족 시 유형2 비중을 줄이라는 동적 지시문 (부족하지 않으면 빈 문자열)
+        String photoAvailabilityStr = photoAvailabilityInstruction != null ? photoAvailabilityInstruction : "";
 
         // 2. 플레이스홀더 치환
         String finalPrompt = promptTemplate
@@ -66,7 +69,8 @@ public class QuizGeneratorService {
                 .replace("{personality}", personalityStr)
                 .replace("{style}", styleStr)
                 .replace("{life_db_context}", lifeDbStr)
-                .replace("{time_orientation_instruction}", timeInstructionStr);
+                .replace("{time_orientation_instruction}", timeInstructionStr)
+                .replace("{photo_availability_instruction}", photoAvailabilityStr);
 
         // System 역할 지시문
         String systemRole = "당신은 치매 환자를 위한 맞춤형 퀴즈를 출제하는 AI 보조관입니다. 응답은 오직 지정된 JSON 배열로만 출력하세요.";
