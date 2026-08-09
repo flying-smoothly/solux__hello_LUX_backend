@@ -298,13 +298,7 @@ public class QuizService {
                 totalCount,
                 correctCount,
                 hint,
-                caculate,
-                request.getSuccessRate(),
-                request.getHintUsed(),
-                request.getAvgResponseTime(),
-                request.getHealthStatus(),
-                request.getSleepStatus(),
-                request.getEmotionStatus()
+                caculate
         );
         quizResultRepository.save(quizResult);
 
@@ -449,7 +443,7 @@ public class QuizService {
      * QuizFeedbackRepository에 findBySetId(Integer setId) 메서드가 있어야 합니다.
      */
     public List<QuizFeedbackResponse> getQuizFeedback(Integer setId) {
-        //  findById(setId) → findBySetId(setId) 로 수정 (feedbackId와 setId 혼동 버그 수정)
+        // ✅ findById(setId) → findBySetId(setId) 로 수정 (feedbackId와 setId 혼동 버그 수정)
         List<QuizFeedback> feedbacks = quizFeedbackRepository.findBySetId(setId);
 
         if (feedbacks.isEmpty()) {
