@@ -54,3 +54,42 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// .env 를 bootRun 의 환경변수로 주입한다.
+// Spring Boot 도 Gradle 도 .env 를 자동으로 읽지 않기 때문에, 파일만 만들어 두면
+// DB_URL / R2_* 같은 값이 어디에도 전달되지 않는다.
+// 이미 셸에 설정된 환경변수가 있으면 그쪽이 우선한다.
+def loadDotEnv = { File envFile ->
+	Map<String, String> values = [:]
+	if (!envFile.exists()) {
+		return values
+	}
+	envFile.eachLine('UTF-8') { String line ->
+		String trimmed = line.trim()
+		if (trimmed.isEmpty() || trimmed.startsWith('#')) {
+			return
+		}
+		if (trimmed.startsWith('export ')) {
+			trimmed = trimmed.substring('export '.length()).trim()
+		}
+		int separator = trimmed.indexOf('=')
+		if (separator <= 0) {
+			return
+		}
+		String key = trimmed.substring(0, separator).trim()
+		String value = trimmed.substring(separator + 1).trim()
+		if (value.length() >= 2 &&
+				((value.startsWith('"') && value.endsWith('"')) ||
+				 (value.startsWith("'") && value.endsWith("'")))) {
+			value = value.substring(1, value.length() - 1)
+		}
+		if (System.getenv(key) == null) {
+			values[key] = value
+		}
+	}
+	return values
+}
+
+tasks.named('bootRun') {
+	environment loadDotEnv(project.file('.env'))
+}
