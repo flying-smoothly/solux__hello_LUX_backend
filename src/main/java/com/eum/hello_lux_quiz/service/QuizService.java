@@ -221,7 +221,7 @@ public class QuizService {
 
         // ✅ 오늘 날짜로 제출된 QuizResult가 있으면 → 해당 setId의 세트 재사용
         QuizSet savedQuizSet;
-        Optional<QuizResult> todayResult = quizResultRepository.findByPCodeAndDate(pCode, LocalDate.now());
+        Optional<QuizResult> todayResult = quizResultRepository.findBypCodeAndDate(pCode, LocalDate.now());
 
         if (todayResult.isPresent()) {
             // 오늘 이미 결과가 있으면 해당 세트 재사용
@@ -298,7 +298,13 @@ public class QuizService {
                 totalCount,
                 correctCount,
                 hint,
-                caculate
+                caculate,
+                request.getSuccessRate(),
+                request.getHintUsed(),
+                request.getAvgResponseTime(),
+                request.getHealthStatus(),
+                request.getSleepStatus(),
+                request.getEmotionStatus()
         );
         quizResultRepository.save(quizResult);
 
@@ -432,7 +438,7 @@ public class QuizService {
     }
 
     public QuizResultResponse getQuizResultByDate(Integer pCode, LocalDate date) {
-        QuizResult quizResult = quizResultRepository.findByPCodeAndDate(pCode, date)
+        QuizResult quizResult = quizResultRepository.findBypCodeAndDate(pCode, date)
                 .orElseThrow(() -> new IllegalArgumentException("해당 날짜의 퀴즈 결과를 찾을 수 없습니다. (pCode: " + pCode + ", date: " + date + ")"));
 
         return QuizResultResponse.from(quizResult, 0);
@@ -443,7 +449,7 @@ public class QuizService {
      * QuizFeedbackRepository에 findBySetId(Integer setId) 메서드가 있어야 합니다.
      */
     public List<QuizFeedbackResponse> getQuizFeedback(Integer setId) {
-        // ✅ findById(setId) → findBySetId(setId) 로 수정 (feedbackId와 setId 혼동 버그 수정)
+        //  findById(setId) → findBySetId(setId) 로 수정 (feedbackId와 setId 혼동 버그 수정)
         List<QuizFeedback> feedbacks = quizFeedbackRepository.findBySetId(setId);
 
         if (feedbacks.isEmpty()) {
@@ -467,9 +473,9 @@ public class QuizService {
         List<QuizResult> results;
 
         if (from != null && to != null) {
-            results = quizResultRepository.findByPCodeAndDateBetween(pCode, from, to);
+            results = quizResultRepository.findBypCodeAndDateBetween(pCode, from, to);
         } else {
-            results = quizResultRepository.findByPCode(pCode);
+            results = quizResultRepository.findBypCode(pCode);
         }
 
         List<QuizResultResponse> responseList = new ArrayList<>();
