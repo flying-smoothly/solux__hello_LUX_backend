@@ -91,15 +91,20 @@ public class QuizController {
     /**
      * GET /api/patients/{p_code}/quiz-results 퀴즈 기록 전체/기간 조회
      */
-    @GetMapping("/patients/{p_code}/quiz-results")
+    @GetMapping("/patients/{pCode}/quiz-results")
     public ResponseEntity<List<QuizResultResponse>> getAllQuizResults(
-            @PathVariable("p_code") String patientCode,
+            @PathVariable("pCode") String pCodeStr,
             @RequestParam(value = "from", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(value = "to", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        Integer pCode;
+        try {
+            pCode = Integer.parseInt(pCodeStr);
+        } catch (NumberFormatException e) {
+            pCode = patientService.resolvePCode(pCodeStr);
+        }
 
-        Integer pCode = patientService.resolvePCode(patientCode);
         List<QuizResultResponse> response = quizService.getAllQuizResultsByPCode(pCode, from, to);
         return ResponseEntity.ok(response);
     }
